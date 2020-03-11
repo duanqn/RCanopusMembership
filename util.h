@@ -29,54 +29,15 @@ namespace Util{
     };
 
     template<class Function, class... Args>
-    class DelayedAsyncExecution{
-        private:
-        using return_type=std::invoke_result_t<Function, Args...>;
-        std::future<return_type> m_result;
-        std::thread *pStdThread;
-
-        template <class T>
-        std::decay_t<T> decay_copy(T&& v) { return std::forward<T>(v); }
-
-        public:
-        explicit DelayedAsyncExecution(std::chrono::milliseconds const& sleep_ms, Function&& func, Args&&... args){
-            std::packaged_task<return_type(Args...)> task([this, &func, &sleep_ms](Args... args){
-                std::this_thread::sleep_for(sleep_ms);
-                return func(args...);
-            });
-            m_result = task.get_future();
-
-            pStdThread = new std::thread(std::move(task), args...);
-        }
-
-        return_type waitForResult(){
-            if(pStdThread != nullptr){
-                if(pStdThread->joinable()){
-                    pStdThread->join();
-                }
-            }
-            return m_result.get();
-        }
-
-        ~DelayedAsyncExecution(){
-            if(pStdThread != nullptr){
-                if(pStdThread->joinable()){
-                    pStdThread->join();
-                }
-                delete pStdThread;
-            }
-        }
-    };
-
-    template<class Function, class... Args>
     class AsyncExecution{
         private:
         using return_type=std::invoke_result_t<Function, Args...>;
         std::future<return_type> m_result;
         std::thread *pStdThread;
 
-        template <class T>
-        std::decay_t<T> decay_copy(T&& v) { return std::forward<T>(v); }
+        AsyncExecution(): m_result(){
+            pStdThread = nullptr;
+        }
 
         public:
         explicit AsyncExecution(Function&& func, Args&&... args){
@@ -95,7 +56,30 @@ namespace Util{
             return m_result.get();
         }
 
-        ~AsyncExecution(){
+        virtual ~AsyncExecution(){
+            if(pStdThread != nullptr){
+                if(pStdThread->joinable()){
+                    pStdThread->join();
+                }
+                delete pStdThread;
+            }
+        }
+    };
+
+    template<class Function, class... Args>
+    class DelayedAsyncExecution final: public AsyncExecution<Function, Args...>{
+        public:
+        explicit DelayedAsyncExecution(std::chrono::milliseconds const& sleep_ms, Function&& func, Args&&... args): AsyncExecution(){
+            std::packaged_task<return_type(Args...)> task([this, &func, &sleep_ms](Args... args){
+                std::this_thread::sleep_for(sleep_ms);
+                return func(args...);
+            });
+            m_result = task.get_future();
+
+            pStdThread = new std::thread(std::move(task), args...);
+        }
+
+        virtual ~DelayedAsyncExecution(){
             if(pStdThread != nullptr){
                 if(pStdThread->joinable()){
                     pStdThread->join();

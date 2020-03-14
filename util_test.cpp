@@ -5,7 +5,11 @@
 
 int func(int index){
     printf("In func %d!\n", index);
-    return 0;
+    return index;
+}
+
+void func2(int index){
+    printf("In func %d!\n", index);
 }
 
 int main(){
@@ -17,6 +21,7 @@ int main(){
     });
 
     AlgoLib::Util::DelayedAsyncExecution job(std::chrono::milliseconds(2000), func, 5);
+    AlgoLib::Util::AsyncExecution job2(func2, 1);
 
     for(; i < 10; ++i){
         for(int j = 0; j < 10000; ++j){
@@ -26,6 +31,9 @@ int main(){
     }
 
     int result = job.waitForResult();
+
+    printf("Joined\n");
+    job2.waitForResult();
 
     printf("Async result = %d\n", result);
     return 0;

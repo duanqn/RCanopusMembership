@@ -8,11 +8,14 @@ else
 	CXXFLAGS += -O2
 endif
 
-.PHONY: set_env all tests clean
+.PHONY: all tests clean
 
-all: set_env
+all: clean tests server
 
-tests: set_env util_test
+server: server.o config.o PeerConnection.o Peer.o
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
+tests: util_test
 
 util_test: util_test.o
 	$(CXX) $^ -o $@ $(LDFLAGS)

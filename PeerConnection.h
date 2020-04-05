@@ -10,7 +10,7 @@ class PeerConnection{
     public:
     PeerConnection();
     ~PeerConnection();
-    bool reliableTransfer(char *src, size_t size);
+    bool send(char *src, size_t size);
 };
 
 #endif

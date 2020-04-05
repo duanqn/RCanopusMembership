@@ -3,7 +3,7 @@ CXXFLAGS += -std=c++17
 LDFLAGS += -lpthread
 
 ifeq ($(DEBUG),TRUE)
-	CXXFLAGS += -Og
+	CXXFLAGS += -Og -g
 else
 	CXXFLAGS += -O2
 endif

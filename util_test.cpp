@@ -20,7 +20,7 @@ int main(){
         printf("i = %d\n", i);
     });
 
-    AlgoLib::Util::DelayedAsyncExecution job(std::chrono::milliseconds(2000), func, 5);
+    AlgoLib::Util::DelayedAsyncExecution job(std::chrono::milliseconds(200), func, 5);
     AlgoLib::Util::AsyncExecution job2(func2, 1);
 
     for(; i < 10; ++i){

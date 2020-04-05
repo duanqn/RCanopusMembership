@@ -2,3 +2,4 @@
 *.exe
 .vscode
 *_test
+server

@@ -28,5 +28,7 @@ struct Config parseFromFile(FILE *f){
         ret.rgPeerAddr.push_back(peerAddr);
     }
 
+    fscanf(f, "%d", &ret.id);
+
     return ret;
 }

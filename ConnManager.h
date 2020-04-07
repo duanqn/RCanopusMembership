@@ -49,7 +49,7 @@ class ConnManager final {
         struct sockaddr_in remoteAddr;
         socklen_t remoteAddrLen = sizeof(remoteAddr);
         for(int i = 0; i < expectedConnections;){
-            int newSocket = accept(boundSocket, (sockaddr *)&remoteAddr, &remoteAddrLen);
+            int newSocket = accept4(boundSocket, (sockaddr *)&remoteAddr, &remoteAddrLen, SOCK_NONBLOCK);
             if(newSocket == -1){
                 continue;
             }

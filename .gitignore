@@ -3,3 +3,4 @@
 .vscode
 *_test
 server
+*.conf

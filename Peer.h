@@ -5,13 +5,15 @@
 #include <netinet/ip.h>
 
 class Peer{
-    private:
-    uint32_t m_id;
-    std::unique_ptr<struct sockaddr_in> m_upNetworkAddress;
-
     public:
-    std::unique_ptr<struct sockaddr_in> getCopyOfAddress();
+    int m_BGid;
+    int m_SLid;
+    struct sockaddr_in m_addr;
     
+    Peer(int BG, int SL):
+        m_BGid(BG),
+        m_SLid(SL)
+    {}
 };
 
 #endif

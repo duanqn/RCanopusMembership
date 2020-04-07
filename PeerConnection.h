@@ -3,13 +3,14 @@
 
 #include "Peer.h"
 
-class PeerConnection{
-    private:
+class PeerConnection final{
+    public:
     std::unique_ptr<Peer> m_upRemotePeer;
     std::shared_ptr<Peer> m_spLocalPeer;
-    public:
-    PeerConnection();
-    ~PeerConnection();
+    int fdSocket;
+
+    PeerConnection(){}
+    ~PeerConnection(){}
     bool send(char *src, size_t size);
 };
 

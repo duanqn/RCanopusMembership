@@ -12,9 +12,12 @@ class Exception{
         return reason_code;
     }
 
-    const static int EXCEPTION_FASTBREAK = 1;
+    const static int EXCEPTION_BASE = 0x2493;
+    const static int EXCEPTION_FASTBREAK = EXCEPTION_BASE + 1;
     const static int EXCEPTION_FASTCONTINUE = EXCEPTION_FASTBREAK + 1;
     const static int EXCEPTION_INPUT_FORMAT = EXCEPTION_FASTCONTINUE + 1;
+    const static int EXCEPTION_SOCKET_CREATION = EXCEPTION_INPUT_FORMAT + 1;
+    const static int EXCEPTION_SOCKET_BINDING = EXCEPTION_SOCKET_CREATION + 1;
 };
 
 class FastBreak final: public Exception{

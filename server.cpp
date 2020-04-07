@@ -2,6 +2,8 @@
 #include "config.h"
 #include "exception.h"
 #include "util.h"
+#include "ConnManager.h"
+#include <memory>
 
 int main(){
     Config config;

@@ -4,13 +4,13 @@
 #include "util.h"
 
 int main(){
+    Config config;
     {
         FILE *fConfig = fopen("test.conf", "r");
         AlgoLib::Util::TCleanup t([fConfig]{
             fclose(fConfig);
         });
 
-        Config config;
         try{
             config = parseFromFile(fConfig);
         }

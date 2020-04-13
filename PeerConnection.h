@@ -12,6 +12,7 @@ class PeerConnection final{
     PeerConnection(){}
     ~PeerConnection(){}
     bool send(char *src, size_t size);
+    static void recv(int socketfd, size_t bytes_to_receive, char * dest);
 };
 
 #endif

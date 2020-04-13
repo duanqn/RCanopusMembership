@@ -72,11 +72,8 @@ namespace Util{
         using return_type=typename AsyncExecution<Function, Args...>::return_type;
         public:
         explicit DelayedAsyncExecution(std::chrono::milliseconds const& sleep_ms, Function&& func, Args&&... args): AsyncExecution<Function, Args...>(){
-            printf("count = %ld\n", sleep_ms.count());
             std::packaged_task<return_type(Args...)> task([this, &func, sleep_ms](Args... args){
-                printf("Before sleeping\n");
                 std::this_thread::sleep_for(sleep_ms);
-                printf("After sleeping\n");
                 return func(args...);
             });
             this->m_result = task.get_future();

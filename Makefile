@@ -14,11 +14,14 @@ endif
 
 all: clean tests $(TARGETS)
 
-server: server.o config.o PeerConnection.o Peer.o
+server: server.o config.o PeerConnection.o Peer.o ConnManager.o message.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
-tests: util_test
+tests: util_test queue_test
 
+queue_test: queue_test.o
+	$(CXX) $^ -o $@ $(LDFLAGS)
+	
 util_test: util_test.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 

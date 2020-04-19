@@ -3,6 +3,7 @@
 .vscode
 *_test
 server
+membership_server
 *.conf
 testdir*
 *.temp

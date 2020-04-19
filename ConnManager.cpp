@@ -1,5 +1,8 @@
 #include "ConnManager.h"
 #include "const.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 char * ConnManager::recvMessage_caller_free_mem(int sock){
     char headerBuf[sizeof(MessageHeader)];
@@ -27,7 +30,16 @@ char * ConnManager::recvMessage_caller_free_mem(int sock){
         MessageRound2Preprepare_BE::partialDeserialize((MessageRound2Preprepare_BE *)buffer);
         break;
 
+        case MESSAGE_ROUND2_PARTIAL_COMMIT:
+        MessageRound2PartialCommit_BE::partialDeserialize((MessageRound2PartialCommit_BE *)buffer);
+        break;
+
+        case MESSAGE_ROUND2_FULL_COMMIT:
+        MessageRound2FullCommit_BE::partialDeserialize((MessageRound2FullCommit_BE *)buffer);
+        break;
+
         default:
+        printf("Message type %hu not allowed to recv.\n", pHeader->msgType);
         throw Exception(Exception::EXCEPTION_MESSAGE_INVALID_TYPE);
         break;
     }
@@ -67,6 +79,12 @@ int ConnManager::listenForIncomingConnections(int boundSocket){
         int newSocket = accept(boundSocket, (sockaddr *)&remoteAddr, &remoteAddrLen);
         if(newSocket == -1){
             continue;
+        }
+
+        int booltrue = 1;
+        socklen_t optlen = sizeof(booltrue);
+        if(setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, &booltrue, optlen) == -1){
+            throw Exception(Exception::EXCEPTION_SOCKET_OPT);
         }
 
         // Loop 1
@@ -124,7 +142,8 @@ ConnManager::ConnManager(const Config &conf):
     mapRound3Status(),
     pTemporaryStorageOfPreprepare(nullptr),
     leader_envoys_rr(1),
-    leader_collector_rr(1){
+    leader_collector_rr(1),
+    round2_verifier(nullptr){
 
     int BGnum = m_upConfig->numBG();
     rgrgConnection = new PeerConnection*[BGnum];
@@ -177,6 +196,12 @@ ConnManager::ConnManager(const Config &conf):
                 }
                 // Retry until succeeds
                 while(connect(rgrgConnection[bg][sl].fdSocket, (sockaddr *)&(rgrgConnection[bg][sl].m_upRemotePeer->m_addr), sizeof(rgrgConnection[bg][sl].m_upRemotePeer->m_addr)) == -1);
+
+                int booltrue = 1;
+                socklen_t optlen = sizeof(booltrue);
+                if(setsockopt(rgrgConnection[bg][sl].fdSocket, IPPROTO_TCP, TCP_NODELAY, &booltrue, optlen) == -1){
+                    throw Exception(Exception::EXCEPTION_SOCKET_OPT);
+                }
 
                 MessageHello dont_care; // Always operate with pointers
                 MessageHello *pHello = &dont_care;
@@ -315,7 +340,12 @@ void ConnManager::sender(){
             MessageRound2Preprepare::serialize((MessageRound2Preprepare *)element.pMessage);
             break;
 
+            case MESSAGE_ROUND2_PARTIAL_COMMIT:
+            MessageRound2PartialCommit::serialize((MessageRound2PartialCommit *)element.pMessage);
+            break;
+
             default:
+            printf("Message type %hu not allowed to send.\n", element.pMessage->msgType);
             throw Exception(Exception::EXCEPTION_MESSAGE_INVALID_TYPE);
         }
 
@@ -395,10 +425,10 @@ void ConnManager::dispatcher_round2(std::unique_ptr<QueueElement> pElement){
     #ifdef DEBUG_PRINT
     PeerConnection *pSender = pElement->upPeers->front();
     if(pSender == nullptr){
-        printf("Received message.\nFrom: SELF Type: %hu\n", pElement->pMessage->msgType);
+        printf("BG %d SL %d received message.\nFrom: SELF\nType: %hu\n", m_upConfig->BGid, m_upConfig->SLid, pElement->pMessage->msgType);
     }
     else{
-        printf("Received message.\nFrom: BG %d SL %d\nType: %hu\n", pSender->m_upRemotePeer->m_BGid, pSender->m_upRemotePeer->m_SLid, pElement->pMessage->msgType);
+        printf("BG %d SL %d received message.\nFrom: BG %d SL %d\nType: %hu\n", m_upConfig->BGid, m_upConfig->SLid, pSender->m_upRemotePeer->m_BGid, pSender->m_upRemotePeer->m_SLid, pElement->pMessage->msgType);
     }
     
     #endif
@@ -426,9 +456,15 @@ void ConnManager::leader_round2_sendPreprepare(){
     DebugThrow(canStartRound2());
     DebugThrow(m_upConfig->SLid == 0);
 
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 1\n");
-    #endif
+    if(pRound2_current_status != nullptr){
+        throw Exception(Exception::EXCEPTION_UNEXPECTED);
+    }
+
+    pRound2_current_status = std::make_unique<CycleStatus>(m_upConfig->numBG());
+    pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_PREPREPARE;
+    pRound2_current_status->awaiting_message_type = MESSAGE_ROUND2_PREPREPARE;
+    pRound2_current_status->message_received_counter = 0;
+    pRound2_current_status->message_required = 1;
 
     int round3_participants_num = m_upConfig->numSL(m_upConfig->BGid) - m_upConfig->getF(m_upConfig->BGid);
     // Note: 2f+1 is fine if the BG has 3f+1 SLs, because gcd(2f+1, 3f+1) = 1
@@ -447,10 +483,6 @@ void ConnManager::leader_round2_sendPreprepare(){
     char *buffer = new char[totalSize];
     MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)buffer;
 
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 2\n");
-    #endif
-
     pPreprepare->header.version = VERSION_LATEST;
     pPreprepare->header.msgType = MESSAGE_ROUND2_PREPREPARE;
     pPreprepare->header.payloadLen = payloadSize;
@@ -466,10 +498,6 @@ void ConnManager::leader_round2_sendPreprepare(){
     pPreprepare->lastcycle = leader_round2_next_rcanopus_cycle - 1;
     pPreprepare->cycle = leader_round2_next_rcanopus_cycle;
     leader_round2_next_rcanopus_cycle++;
-
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 3\n");
-    #endif
 
     // Round-robin select collector excluding the leader
     pPreprepare->collector_SLid = leader_collector_rr;
@@ -488,16 +516,8 @@ void ConnManager::leader_round2_sendPreprepare(){
         }
     }
 
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 4\n");
-    #endif
-
     char * contentBegin = pPreprepare->participantsAndContent + sizeof(uint16_t) * round3_participants_num;
     memset(contentBegin, pPreprepare->cycle & 0xFF, requestSize);
-
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 5\n");
-    #endif
 
     QueueElement element;
     element.pMessage = (MessageHeader *)buffer;
@@ -514,16 +534,8 @@ void ConnManager::leader_round2_sendPreprepare(){
 
     // Don't forget to send a copy to myself
     element.upPeers->push_front(nullptr);
-
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 6\n");
-    #endif
     
     pSendQueue->enqueue(std::move(element));
-
-    #ifdef DEBUG_PRINT
-    printf("Leader checkpoint 7\n");
-    #endif
 }
 
 void ConnManager::dispatcher_round2_request(std::unique_ptr<QueueElement> pElement){
@@ -581,19 +593,92 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
         printf("BG %d SL %d is the collector for cycle %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->cycle);
         #endif
         round2_isCollector = true;
+        pRound2_current_status->state = CycleState::ROUND2_COLLECTOR_WAITING_FOR_PARTIALCOMMITS;
+        pRound2_current_status->awaiting_message_type = MESSAGE_ROUND2_PARTIAL_COMMIT;
+        pRound2_current_status->message_required = m_upConfig->numSL(m_upConfig->BGid);
+        pRound2_current_status->message_received_counter = 0;
     }
     else{
         round2_isCollector = false;
+        pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_FULLCOMMITS;
+        pRound2_current_status->awaiting_message_type = MESSAGE_ROUND2_FULL_COMMIT;
+        pRound2_current_status->message_required = 1;
+        pRound2_current_status->message_received_counter = 0;
     }
 
-    // Keep it in a temporary storage until it's committed
+    // Send partial commit message to collector
+    // MESSAGE_ROUND2_PARTIAL_COMMIT
+    char *buffer = new char[sizeof(MessageRound2PartialCommit)];
+    MessageRound2PartialCommit *pPartialC = (MessageRound2PartialCommit *)buffer; // always operate through pointers
+
+    pPartialC->header.version = VERSION_LATEST;
+    pPartialC->header.msgType = MESSAGE_ROUND2_PARTIAL_COMMIT;
+    pPartialC->header.payloadLen = sizeof(MessageRound2PartialCommit) - sizeof(MessageHeader);
+
+    pPartialC->sender = m_upConfig->SLid;
+    pPartialC->view = pRound2_current_status->round2_view;
+    pPartialC->seq = pRound2_current_status->round2_sequence;
+
+    memset(pPartialC->signature, 0, sizeof(pPartialC->signature));
+
+    QueueElement element;
+    element.pMessage = (MessageHeader *)buffer;
+
+    if(pPreprepare->collector_SLid == m_upConfig->SLid){
+        // Send to myself
+        element.upPeers->push_front(nullptr);
+    }
+    else{
+        element.upPeers->push_front(&rgrgConnection[m_upConfig->BGid][pPreprepare->collector_SLid]);
+    }
+    
+    pSendQueue->enqueue(std::move(element));
+
+    // Keep the Preprepare message in a temporary storage until it's committed
     DebugThrow(pTemporaryStorageOfPreprepare == nullptr);
     pTemporaryStorageOfPreprepare.swap(pElement);   // Keep the Preprepare message until it's committed
 }
 
 void ConnManager::dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> pElement){
+    if(pRound2_current_status == nullptr || pRound2_current_status->state == CycleState::ROUND2_WAITING_FOR_PREPREPARE){
+        // Don't let the unique_ptr delete this message
+        QueueElement *ptr = pElement.release();
+        this->pRecvQueue->enqueue(std::move(*ptr));
+
+        return;
+    }
+
     DebugThrowElseReturnVoid(round2_isCollector);
+    DebugThrowElseReturnVoid(pRound2_current_status->state == CycleState::ROUND2_COLLECTOR_WAITING_FOR_PARTIALCOMMITS);
+
+    MessageRound2PartialCommit* pPartialC = (MessageRound2PartialCommit *)pElement->pMessage;
+    DebugThrowElseReturnVoid(pPartialC->view == pRound2_current_status->round2_view);
+    DebugThrowElseReturnVoid(pPartialC->seq == pRound2_current_status->round2_sequence);
+
+    if(round2_verifier == nullptr){
+        throw Exception(Exception::EXCEPTION_VERIFIER_NOT_SET);
+    }
+    // Check signature
+    DebugThrowElseReturnVoid(
+        round2_verifier(
+            (char *)pTemporaryStorageOfPreprepare->pMessage,
+            pTemporaryStorageOfPreprepare->pMessage->payloadLen,
+            pPartialC->signature,
+            sizeof(pPartialC->signature)
+            )
+        );
     
+    // increase counter
+    
+    // Neglected: We should check the message is from a sender we haven't seen in this cycle.
+    // But we skip this check because we don't have any resending mechanisms.
+    // Each message will be sent and received exactly once.
+    pRound2_current_status->message_received_counter++;
+
+    // Send FullCommit
+    if(pRound2_current_status->message_received_counter == pRound2_current_status->message_required){
+        printf("Should send out full commit message here. Not implemented.\n");
+    }
 }
 
 void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pElement){

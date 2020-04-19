@@ -6,6 +6,16 @@
 #include <memory>
 #include "QueueElement.h"
 
+bool fakeVerifier(char const *msg, size_t msgsize, char const *sig, size_t sigsize){
+    for(int i = 0; i < sigsize; ++i){
+        if(sig[i] != '\0'){
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int main(){
     Config config;
     {
@@ -23,7 +33,7 @@ int main(){
                     printf("Wrong input format!\n");
                     break;
                 default:
-                    throw e;
+                    throw;
             }
             
             return 1;
@@ -36,18 +46,23 @@ int main(){
         upMgr = std::make_unique<ConnManager>(config);
     }
     catch(Exception &e){
-        printf("Exception code %X\n", e.getReason());
-        throw e;
+        printf("Exception code %d\n", e.getReason());
+        throw;
     }
     
     printf("Connection set up successfully.\n");
 
     try{
+        upMgr->setVerifier(fakeVerifier);
         upMgr->start();
     }
+    catch(FailFast &e){
+        printf("FailFast at %s:%d\n", e.m_filename, e.m_line);
+        throw;
+    }
     catch(Exception &e){
-        printf("Exception code %X\n", e.getReason());
-        throw e;
+        printf("Exception code %d\n", e.getReason());
+        throw;
     }
     
     return 0;

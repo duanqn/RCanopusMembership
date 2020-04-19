@@ -19,6 +19,8 @@
 #include <queue>
 #include "CycleStatus.h"
 
+using SigVerifier = bool (*)(char const *, size_t, char const *, size_t);
+
 class ConnManager {
     private:
     std::unique_ptr<Config> m_upConfig;
@@ -43,6 +45,7 @@ class ConnManager {
     uint16_t leader_collector_rr;
     uint16_t leader_envoys_rr;
     bool round2_isCollector;
+    SigVerifier round2_verifier;
     
     // Make sure you are not checking your own ID
     bool isPassiveConnection(int BGid, int SLid){
@@ -96,6 +99,9 @@ class ConnManager {
     }
 
     void start();
+    inline void setVerifier(SigVerifier v){
+        round2_verifier = v;
+    }
 
     private:
     void dispatcher_test(std::unique_ptr<QueueElement> pElement);

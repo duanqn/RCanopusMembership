@@ -44,7 +44,7 @@ def main():
         dirname = args.prefix + str(i+1)
         
         os.chdir(os.path.join(thisdir, dirname))
-        subprocess.Popen(['./' + args.exe])
+        subprocess.Popen(['./' + args.exe, 'BG'+str(SLid[i][0]), 'SL'+str(SLid[i][1])])
 
 
 

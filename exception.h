@@ -12,7 +12,7 @@ class Exception{
         return reason_code;
     }
 
-    const static int EXCEPTION_BASE = 0x1C00;
+    const static int EXCEPTION_BASE = 9900;
     const static int EXCEPTION_DEBUG_FAILFAST = EXCEPTION_BASE + 1;
     const static int EXCEPTION_FASTBREAK = EXCEPTION_DEBUG_FAILFAST + 1;
     const static int EXCEPTION_FASTCONTINUE = EXCEPTION_FASTBREAK + 1;
@@ -30,27 +30,36 @@ class Exception{
     const static int EXCEPTION_MESSAGE_INVALID_TYPE = EXCEPTION_MESSAGE_INCOMPLETE_HEADER + 1;
     const static int EXCEPTION_MESSAGE_BAD_FORMAT = EXCEPTION_MESSAGE_INVALID_TYPE + 1;
     const static int EXCEPTION_MESSAGE_BAD_CAST = EXCEPTION_MESSAGE_BAD_FORMAT + 1;
+    const static int EXCEPTION_UNEXPECTED = EXCEPTION_MESSAGE_BAD_CAST + 1;
+    const static int EXCEPTION_VERIFIER_NOT_SET = EXCEPTION_UNEXPECTED + 1;
 };
 
 class FastBreak final: public Exception{
-    private:
+    public:
     int reason_extra;
 
-    public:
     explicit FastBreak(int extra): Exception(EXCEPTION_FASTBREAK), reason_extra(extra){}
     ~FastBreak(){}
-
 };
 
 class FastContinue final: public Exception{
-    private:
+    public:
     int reason_extra;
 
-    public:
     explicit FastContinue(int extra): Exception(EXCEPTION_FASTCONTINUE), reason_extra(extra){}
     ~FastContinue(){}
-    
 };
+
+#ifdef __FILE__
+class FailFast final: public Exception{
+    public:
+    char const* m_filename;
+    int m_line;
+
+    explicit FailFast(int line, char const *filename): Exception(EXCEPTION_DEBUG_FAILFAST), m_line(line), m_filename(filename){}
+    ~FailFast(){}
+};
+#endif
 
 void DebugFailFast();
 
@@ -59,7 +68,7 @@ void DebugFailFast();
 { \
     bool temp = (flag); \
     if(!temp){ \
-        throw Exception(Exception::EXCEPTION_DEBUG_FAILFAST); \
+        throw FailFast(__LINE__, __FILE__); \
     } \
 }
     
@@ -68,7 +77,7 @@ void DebugFailFast();
 { \
     bool temp = (flag); \
     if(!temp){ \
-        throw Exception(Exception::EXCEPTION_DEBUG_FAILFAST); \
+        throw FailFast(__LINE__, __FILE__); \
     } \
 }
 
@@ -76,7 +85,7 @@ void DebugFailFast();
 { \
     bool temp = (flag); \
     if(!temp){ \
-        throw Exception(Exception::EXCEPTION_DEBUG_FAILFAST); \
+        throw FailFast(__LINE__, __FILE__); \
     } \
 }
 

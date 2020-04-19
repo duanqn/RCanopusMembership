@@ -9,6 +9,7 @@ const static uint16_t VERSION_LATEST = VERSION_1_0;
 
 const static size_t SBFT_HASH_SIZE = 32;
 const static size_t SBFT_SIGNATURE_SIZE = 32;
+const static size_t SBFT_COMBINED_SIGNATURE_SIZE = 32;
 
 const static size_t INIT_QUEUE_CAPACITY = 128;
 const static size_t REQUEST_BATCH_SIZE = 1024 * 1024;

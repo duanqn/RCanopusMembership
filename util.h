@@ -59,7 +59,7 @@ namespace Util{
         virtual ~AsyncExecution(){
             if(pStdThread != nullptr){
                 if(pStdThread->joinable()){
-                    pStdThread->join();
+                    pStdThread->detach();
                 }
                 delete pStdThread;
             }

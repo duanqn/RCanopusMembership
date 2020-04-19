@@ -149,6 +149,8 @@ struct MessageRound2Preprepare_BE{
     static MessageRound2Preprepare *partialDeserialize(MessageRound2Preprepare_BE *p);
 };
 
+static_assert(sizeof(MessageRound2Preprepare_BE) == sizeof(MessageRound2Preprepare));
+
 struct MessageRound2PartialCommit;
 struct MessageRound2PartialCommit_BE;
 
@@ -172,6 +174,8 @@ struct MessageRound2PartialCommit_BE{
     static MessageRound2PartialCommit *partialDeserialize(MessageRound2PartialCommit_BE *p);
 };
 
+static_assert(sizeof(MessageRound2PartialCommit_BE) == sizeof(MessageRound2PartialCommit));
+
 struct MessageRound2FullCommit;
 struct MessageRound2FullCommit_BE;
 
@@ -180,7 +184,7 @@ struct MessageRound2FullCommit{
     uint16_t sender;
     uint16_t view;
     uint16_t seq;
-    char combinedSignature[SBFT_SIGNATURE_SIZE];
+    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];
 
     static MessageRound2FullCommit_BE *serialize(MessageRound2FullCommit *p);
 };
@@ -190,10 +194,12 @@ struct MessageRound2FullCommit_BE{
     uint16_t sender;
     uint16_t view;
     uint16_t seq;
-    char combinedSignature[SBFT_SIGNATURE_SIZE];
+    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];
 
     static MessageRound2FullCommit *partialDeserialize(MessageRound2FullCommit_BE *p);
 };
+
+static_assert(sizeof(MessageRound2FullCommit_BE) == sizeof(MessageRound2FullCommit));
 
 #pragma pack(pop)
 

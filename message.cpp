@@ -82,3 +82,37 @@ MessageRound2Preprepare *MessageRound2Preprepare_BE::partialDeserialize(MessageR
 
     return (MessageRound2Preprepare *)p;
 }
+
+MessageRound2PartialCommit_BE *MessageRound2PartialCommit::serialize(MessageRound2PartialCommit *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender);
+    toBE(&p->view);
+    toBE(&p->seq);
+
+    return (MessageRound2PartialCommit_BE *)p;
+}
+
+MessageRound2PartialCommit *MessageRound2PartialCommit_BE::partialDeserialize(MessageRound2PartialCommit_BE *p){
+    fromBE(&p->sender);
+    fromBE(&p->view);
+    fromBE(&p->seq);
+
+    return (MessageRound2PartialCommit *)p;
+}
+
+MessageRound2FullCommit_BE *MessageRound2FullCommit::serialize(MessageRound2FullCommit *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender);
+    toBE(&p->view);
+    toBE(&p->seq);
+
+    return (MessageRound2FullCommit_BE *)p;
+}
+
+MessageRound2FullCommit *MessageRound2FullCommit_BE::partialDeserialize(MessageRound2FullCommit_BE *p){
+    fromBE(&p->sender);
+    fromBE(&p->view);
+    fromBE(&p->seq);
+
+    return (MessageRound2FullCommit *)p;
+}

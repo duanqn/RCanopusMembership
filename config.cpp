@@ -5,7 +5,7 @@
 struct Config parseFromFile(FILE *f){
     Config ret;
     int BGnum = 0;
-    if(fscanf(f, "%d", &BGnum) != 1){
+    if(fscanf(f, "%d%d", &BGnum, &ret.globalFailures) != 2){
         throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
     }
 
@@ -17,11 +17,14 @@ struct Config parseFromFile(FILE *f){
     int SLid = 0;
 
     for(int i = 0; i < BGnum; ++i){
-        ret.rgrgPeerAddr.push_back(std::vector<struct sockaddr_in>());
+        BGInfo info;
         int SLnum = 0;
-        if(fscanf(f, "%d", &SLnum) != 1){
+        int failure = 0;
+        if(fscanf(f, "%d%d", &SLnum, &failure) != 2){
             throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
         }
+
+        info.failure = failure;
 
         for(int j = 0; j < SLnum; ++j){
             if(fscanf(f, "%40s", tmpstr) != 1){
@@ -40,8 +43,10 @@ struct Config parseFromFile(FILE *f){
             }
 
             peerAddr.sin_port = htons(tmpport);
-            ret.rgrgPeerAddr[i].push_back(peerAddr);
+            info.addr.push_back(peerAddr);
         }
+
+        ret.rgBGInfo.push_back(std::move(info));
     }
 
     if(fscanf(f, "%d%d", &ret.BGid, &ret.SLid) != 2){
@@ -52,12 +57,13 @@ struct Config parseFromFile(FILE *f){
         throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
     }
 
-    if(ret.BGid >= ret.rgrgPeerAddr.size()){
+    if(ret.BGid >= BGnum){
         throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
     }
-    else if(ret.SLid >= ret.rgrgPeerAddr[ret.BGid].size()){
+    else if(ret.SLid >= ret.numSL(ret.BGid)){
         throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
     }
 
     return ret;
 }
+

@@ -5,8 +5,17 @@
 #include "PeerConnection.h"
 #include <utility>
 #include <forward_list>
+#include <cstring>
 
 struct QueueElement final{
+    private:
+    MessageHeader* release_message(){
+        MessageHeader *ret = pMessage;
+        pMessage = nullptr;
+        return ret;
+    }
+
+    public:
     std::unique_ptr<std::forward_list<PeerConnection*> > upPeers;
     MessageHeader* pMessage;
 
@@ -19,16 +28,35 @@ struct QueueElement final{
     QueueElement& operator=(const QueueElement& e) = delete;
 
     QueueElement(QueueElement&& e):
-        pMessage(e.pMessage),
+        pMessage(e.release_message()),
         upPeers(std::move(e.upPeers))
         {}
 
     QueueElement& operator=(QueueElement&& e){
-        pMessage = std::move(e.pMessage);
+        pMessage = e.release_message();
         upPeers = std::move(e.upPeers);
     }
 
-    ~QueueElement(){}
+    ~QueueElement(){
+        if(pMessage != nullptr){
+            delete[] (char *)pMessage;
+        }
+    }
+
+    void clone(const QueueElement &e){
+        size_t messageSize = getMessageSize(e.pMessage);
+        char *buffer = new char[messageSize];
+
+        // Free any occupied memory
+        if(pMessage != nullptr){
+            delete[] (char *)pMessage;
+        }
+
+        pMessage = (MessageHeader *)buffer;
+        memcpy(buffer, e.pMessage, messageSize);
+
+        upPeers = std::make_unique<std::forward_list<PeerConnection*> >(*(e.upPeers));
+    }
 };
 
 #endif

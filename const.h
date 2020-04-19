@@ -23,4 +23,8 @@ namespace CALC{
 
 const static std::chrono::milliseconds REQUEST_BATCH_INTERVAL = CALC::REQUEST_BATCH_INTERVAL;
 
+const static int MAX_ROUND3_CYCLES = 10;
+
+const static void *POINTER_TO_SELF = nullptr;
+
 #endif

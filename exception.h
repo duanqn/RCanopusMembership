@@ -13,11 +13,13 @@ class Exception{
     }
 
     const static int EXCEPTION_BASE = 0x1C00;
-    const static int EXCEPTION_FASTBREAK = EXCEPTION_BASE + 1;
+    const static int EXCEPTION_DEBUG_FAILFAST = EXCEPTION_BASE + 1;
+    const static int EXCEPTION_FASTBREAK = EXCEPTION_DEBUG_FAILFAST + 1;
     const static int EXCEPTION_FASTCONTINUE = EXCEPTION_FASTBREAK + 1;
     const static int EXCEPTION_INPUT_FORMAT = EXCEPTION_FASTCONTINUE + 1;
     const static int EXCEPTION_SOCKET_CREATION = EXCEPTION_INPUT_FORMAT + 1;
-    const static int EXCEPTION_SOCKET_BINDING = EXCEPTION_SOCKET_CREATION + 1;
+    const static int EXCEPTION_SOCKET_OPT = EXCEPTION_SOCKET_CREATION + 1;
+    const static int EXCEPTION_SOCKET_BINDING = EXCEPTION_SOCKET_OPT + 1;
     const static int EXCEPTION_MESSAGE_CREATION_TOOLONG = EXCEPTION_SOCKET_BINDING + 1;
     const static int EXCEPTION_MESSAGE_SERIALIZATION_BUFFER_OVERFLOW = EXCEPTION_MESSAGE_CREATION_TOOLONG + 1;
     const static int EXCEPTION_ILLEGAL_TEMPLATE_PARAMETER = EXCEPTION_MESSAGE_SERIALIZATION_BUFFER_OVERFLOW + 1;
@@ -49,4 +51,53 @@ class FastContinue final: public Exception{
     ~FastContinue(){}
     
 };
+
+void DebugFailFast();
+
+#ifdef DEBUG_FAILFAST
+#define DebugThrowElseReturnVoid(flag) \
+{ \
+    bool temp = (flag); \
+    if(!temp){ \
+        throw Exception(Exception::EXCEPTION_DEBUG_FAILFAST); \
+    } \
+}
+    
+
+#define DebugThrowElseReturn(flag, res) \
+{ \
+    bool temp = (flag); \
+    if(!temp){ \
+        throw Exception(Exception::EXCEPTION_DEBUG_FAILFAST); \
+    } \
+}
+
+#define DebugThrow(flag) \
+{ \
+    bool temp = (flag); \
+    if(!temp){ \
+        throw Exception(Exception::EXCEPTION_DEBUG_FAILFAST); \
+    } \
+}
+
+#else
+#define DebugThrowElseReturnVoid(flag) \
+{ \
+    bool temp = (flag); \
+    if(!temp){ \
+        return; \
+    } \
+}
+
+#define DebugThrowElseReturn(flag, res) \
+{ \
+    bool temp = (flag); \
+    if(!temp){ \
+        return res; \
+    } \
+}
+
+#define DebugThrow(flag) 
+
+#endif // DEBUG_FAILFAST
 #endif

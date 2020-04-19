@@ -13,12 +13,13 @@
 #include <unistd.h>
 #include "util.h"
 #include "message.h"
-#include "readerwriterqueue.h"
 #include "blockingconcurrentqueue.h"
 #include "QueueElement.h"
 #include "poll.h"
+#include <queue>
+#include "CycleStatus.h"
 
-class ConnManager final {
+class ConnManager {
     private:
     std::unique_ptr<Config> m_upConfig;
     PeerConnection** rgrgConnection;
@@ -27,9 +28,22 @@ class ConnManager final {
     struct pollfd *rgPoll;
     PeerConnection** rgPollSlotToConnection;
 
-    moodycamel::BlockingReaderWriterQueue<QueueElement> *pRecvQueue;
+    moodycamel::BlockingConcurrentQueue<QueueElement> *pRecvQueue;
     moodycamel::BlockingConcurrentQueue<QueueElement> *pSendQueue;
 
+    std::unordered_map<int, CycleStatus> mapRound3Status;
+
+    int *rgLeader_batch_received_from;
+    int leader_batch_processed; // sent out preprepare
+    uint16_t leader_round2_next_rcanopus_cycle;
+    uint16_t round2_next_view;
+    uint16_t round2_next_seq;
+    std::unique_ptr<CycleStatus> pRound2_current_status;
+    std::unique_ptr<QueueElement> pTemporaryStorageOfPreprepare;
+    uint16_t leader_collector_rr;
+    uint16_t leader_envoys_rr;
+    bool round2_isCollector;
+    
     // Make sure you are not checking your own ID
     bool isPassiveConnection(int BGid, int SLid){
         if(BGid > m_upConfig->BGid){
@@ -40,9 +54,17 @@ class ConnManager final {
         }
     }
 
+    // Make sure you are not checking your own ID
     bool isActiveConnection(int BGid, int SLid){
         return !isPassiveConnection(BGid, SLid);
     }
+
+    bool isRound2Leader(){
+        // We never do view change!
+        return m_upConfig->SLid == 0;
+    }
+
+    bool canStartRound2();
 
     int listenForIncomingConnections(int boundSocket);
 
@@ -51,11 +73,13 @@ class ConnManager final {
     void sender();
     void mockClient(std::chrono::milliseconds interval);
 
+    void leader_round2_sendPreprepare();
+
     public:
     ConnManager(const Config &conf);
 
-    ~ConnManager(){
-        int BGnum = m_upConfig->rgrgPeerAddr.size();
+    virtual ~ConnManager(){
+        int BGnum = m_upConfig->numBG();
         for(int i = 0; i < BGnum; ++i){
             delete[] rgrgConnection[i];
         }
@@ -65,11 +89,22 @@ class ConnManager final {
         delete pRecvQueue;
         delete pSendQueue;
         delete[] rgPollSlotToConnection;
+
+        if(rgLeader_batch_received_from != nullptr){
+            delete[] rgLeader_batch_received_from;
+        }
     }
 
     void start();
 
-    void dispatcher_test();
+    private:
+    void dispatcher_test(std::unique_ptr<QueueElement> pElement);
+
+    virtual void dispatcher_round2(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round2_request(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pElement);
 
 };
 #endif

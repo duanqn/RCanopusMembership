@@ -6,28 +6,47 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <vector>
+
+struct BGInfo{
+    int failure;
+    std::vector<struct sockaddr_in> addr;
+};
+
 struct Config{
-    std::vector<std::vector<struct sockaddr_in> > rgrgPeerAddr;
+    std::vector<BGInfo> rgBGInfo;
     int BGid;
     int SLid;
+    int globalFailures;
 
-    Config(): rgrgPeerAddr(){
+    Config(): rgBGInfo(){
         BGid = SLid = 0;
     }
 
     Config(Config&& c):
-        rgrgPeerAddr(std::move(c.rgrgPeerAddr)),
+        rgBGInfo(std::move(c.rgBGInfo)),
         BGid(c.BGid),
         SLid(c.SLid)
     {}
 
     Config(const Config& c):
-        rgrgPeerAddr(c.rgrgPeerAddr),
+        rgBGInfo(c.rgBGInfo),
         BGid(c.BGid),
         SLid(c.SLid)
     {}
 
     Config& operator = (const Config &c) = default;
+
+    inline int numBG() const {
+        return rgBGInfo.size();
+    }
+
+    inline int numSL(int BGid) const {
+        return rgBGInfo[BGid].addr.size();
+    }
+
+    inline int getF(int BGid) const {
+        return rgBGInfo[BGid].failure;
+    }
 };
 
 struct Config parseFromFile(FILE *f);

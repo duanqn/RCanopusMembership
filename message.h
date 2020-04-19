@@ -99,24 +99,31 @@ struct MessageRound2Request_BE;
 
 struct MessageRound2Request{
     MessageHeader header;
+    uint16_t sender;
     char content[];
 
     static MessageRound2Request_BE *serialize(MessageRound2Request *p);
 };
 
+static_assert(sizeof(MessageRound2Request) == sizeof(MessageHeader) + sizeof(uint16_t));
+
 struct MessageRound2Request_BE{
     MessageHeader_BE header;
+    uint16_t sender;
     char content[];
 
     // Header already parsed
     static MessageRound2Request *partialDeserialize(MessageRound2Request_BE *p);
 };
 
+static_assert(sizeof(MessageRound2Request_BE) == sizeof(MessageRound2Request));
+
 struct MessageRound2Preprepare;
 struct MessageRound2Preprepare_BE;
 
 struct MessageRound2Preprepare{
     MessageHeader header;
+    uint16_t sender;
     uint16_t view;
     uint16_t seq;
     uint16_t cycle;
@@ -130,6 +137,7 @@ struct MessageRound2Preprepare{
 
 struct MessageRound2Preprepare_BE{
     MessageHeader_BE header;
+    uint16_t sender;
     uint16_t view;
     uint16_t seq;
     uint16_t cycle;
@@ -146,6 +154,7 @@ struct MessageRound2PartialCommit_BE;
 
 struct MessageRound2PartialCommit{
     MessageHeader header;
+    uint16_t sender;
     uint16_t view;
     uint16_t seq;
     char signature[SBFT_SIGNATURE_SIZE];
@@ -155,6 +164,7 @@ struct MessageRound2PartialCommit{
 
 struct MessageRound2PartialCommit_BE{
     MessageHeader_BE header;
+    uint16_t sender;
     uint16_t view;
     uint16_t seq;
     char signature[SBFT_SIGNATURE_SIZE];
@@ -167,6 +177,7 @@ struct MessageRound2FullCommit_BE;
 
 struct MessageRound2FullCommit{
     MessageHeader header;
+    uint16_t sender;
     uint16_t view;
     uint16_t seq;
     char combinedSignature[SBFT_SIGNATURE_SIZE];
@@ -176,6 +187,7 @@ struct MessageRound2FullCommit{
 
 struct MessageRound2FullCommit_BE{
     MessageHeader header;
+    uint16_t sender;
     uint16_t view;
     uint16_t seq;
     char combinedSignature[SBFT_SIGNATURE_SIZE];
@@ -185,6 +197,6 @@ struct MessageRound2FullCommit_BE{
 
 #pragma pack(pop)
 
-
+size_t getMessageSize(MessageHeader *pHeader);
 
 #endif

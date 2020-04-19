@@ -16,7 +16,6 @@ void consumer(moodycamel::BlockingReaderWriterQueue<QueueElement>* pQueue){
             throw std::string("Corrupt element!\n");
             return;
         }
-        delete[] (char *)res.pMessage;
     }
 }
 

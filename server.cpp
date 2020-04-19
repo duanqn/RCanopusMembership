@@ -42,6 +42,13 @@ int main(){
     
     printf("Connection set up successfully.\n");
 
-    upMgr->start();
+    try{
+        upMgr->start();
+    }
+    catch(Exception &e){
+        printf("Exception code %X\n", e.getReason());
+        throw e;
+    }
+    
     return 0;
 }

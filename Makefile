@@ -1,11 +1,11 @@
-DEBUG=FALSE
+DEBUG=TRUE
 CXXFLAGS += -std=c++17
 LDFLAGS += -lpthread
 
-TARGETS = server
+TARGETS = membership_server
 
 ifeq ($(DEBUG),TRUE)
-	CXXFLAGS += -Og -g
+	CXXFLAGS += -Og -g -DDEBUG_FAILFAST -DDEBUG_PRINT
 else
 	CXXFLAGS += -O2
 endif
@@ -14,7 +14,7 @@ endif
 
 all: clean tests $(TARGETS)
 
-server: server.o config.o PeerConnection.o Peer.o ConnManager.o message.o
+membership_server: server.o config.o PeerConnection.o Peer.o ConnManager.o message.o exception.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
 tests: util_test queue_test

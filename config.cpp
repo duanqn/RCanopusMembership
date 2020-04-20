@@ -5,6 +5,10 @@
 struct Config parseFromFile(FILE *f){
     Config ret;
     int BGnum = 0;
+    if(fscanf(f, "%d", &ret.requestPerSLPerSecond) != 1){
+        throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
+    }
+    
     if(fscanf(f, "%d%d", &BGnum, &ret.globalFailures) != 2){
         throw Exception(Exception::EXCEPTION_INPUT_FORMAT);
     }

@@ -17,6 +17,7 @@ struct Config{
     int BGid;
     int SLid;
     int globalFailures;
+    int requestPerSLPerSecond;
 
     Config(): rgBGInfo(){
         BGid = SLid = 0;
@@ -25,13 +26,15 @@ struct Config{
     Config(Config&& c):
         rgBGInfo(std::move(c.rgBGInfo)),
         BGid(c.BGid),
-        SLid(c.SLid)
+        SLid(c.SLid),
+        requestPerSLPerSecond(c.requestPerSLPerSecond)
     {}
 
     Config(const Config& c):
         rgBGInfo(c.rgBGInfo),
         BGid(c.BGid),
-        SLid(c.SLid)
+        SLid(c.SLid),
+        requestPerSLPerSecond(c.requestPerSLPerSecond)
     {}
 
     Config& operator = (const Config &c) = default;

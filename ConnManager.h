@@ -26,6 +26,8 @@ class ConnManager {
     std::unique_ptr<Config> m_upConfig;
     PeerConnection** rgrgConnection;
 
+    std::chrono::milliseconds REQUEST_BATCH_INTERVAL;
+
     int numOfRemotePeers;
     struct pollfd *rgPoll;
     PeerConnection** rgPollSlotToConnection;

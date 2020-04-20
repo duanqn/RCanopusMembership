@@ -32,6 +32,7 @@ class Exception{
     const static int EXCEPTION_MESSAGE_BAD_CAST = EXCEPTION_MESSAGE_BAD_FORMAT + 1;
     const static int EXCEPTION_UNEXPECTED = EXCEPTION_MESSAGE_BAD_CAST + 1;
     const static int EXCEPTION_VERIFIER_NOT_SET = EXCEPTION_UNEXPECTED + 1;
+    const static int EXCEPTION_PREPREPARE_MISSING = EXCEPTION_VERIFIER_NOT_SET + 1;
 };
 
 class FastBreak final: public Exception{

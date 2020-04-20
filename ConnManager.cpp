@@ -1,5 +1,6 @@
 #include "ConnManager.h"
 #include "const.h"
+#include <sched.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -128,6 +129,7 @@ int ConnManager::listenForIncomingConnections(int boundSocket){
 ConnManager::ConnManager(const Config &conf):
     pRecvQueue(nullptr),
     pSendQueue(nullptr),
+    REQUEST_BATCH_INTERVAL(0),
     numOfRemotePeers(0),
     m_upConfig(std::make_unique<Config>(conf)),
     rgrgConnection(nullptr),
@@ -144,6 +146,11 @@ ConnManager::ConnManager(const Config &conf):
     leader_envoys_rr(1),
     leader_collector_rr(1),
     round2_verifier(nullptr){
+
+    float REQUEST_PER_BATCH = REQUEST_BATCH_SIZE / (float) REQUEST_SIZE;
+    REQUEST_BATCH_INTERVAL = std::chrono::milliseconds((int)(1000 * REQUEST_PER_BATCH / m_upConfig->requestPerSLPerSecond));
+
+    printf("interval = %ldms\n", REQUEST_BATCH_INTERVAL.count());
 
     int BGnum = m_upConfig->numBG();
     rgrgConnection = new PeerConnection*[BGnum];
@@ -344,6 +351,10 @@ void ConnManager::sender(){
             MessageRound2PartialCommit::serialize((MessageRound2PartialCommit *)element.pMessage);
             break;
 
+            case MESSAGE_ROUND2_FULL_COMMIT:
+            MessageRound2FullCommit::serialize((MessageRound2FullCommit *)element.pMessage);
+            break;
+
             default:
             printf("Message type %hu not allowed to send.\n", element.pMessage->msgType);
             throw Exception(Exception::EXCEPTION_MESSAGE_INVALID_TYPE);
@@ -446,10 +457,6 @@ void ConnManager::dispatcher_round2(std::unique_ptr<QueueElement> pElement){
         case MESSAGE_ROUND2_FULL_COMMIT:
         return dispatcher_round2_fullCommit(std::move(pElement));
     }
-
-    #ifdef DEBUG_PRINT
-    printf("Finished dispatching message\n");
-    #endif
 }
 
 void ConnManager::leader_round2_sendPreprepare(){
@@ -600,7 +607,7 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     }
     else{
         round2_isCollector = false;
-        pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_FULLCOMMITS;
+        pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_FULLCOMMIT;
         pRound2_current_status->awaiting_message_type = MESSAGE_ROUND2_FULL_COMMIT;
         pRound2_current_status->message_required = 1;
         pRound2_current_status->message_received_counter = 0;
@@ -609,7 +616,7 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     // Send partial commit message to collector
     // MESSAGE_ROUND2_PARTIAL_COMMIT
     char *buffer = new char[sizeof(MessageRound2PartialCommit)];
-    MessageRound2PartialCommit *pPartialC = (MessageRound2PartialCommit *)buffer; // always operate through pointers
+    MessageRound2PartialCommit *pPartialC = (MessageRound2PartialCommit *)buffer;
 
     pPartialC->header.version = VERSION_LATEST;
     pPartialC->header.msgType = MESSAGE_ROUND2_PARTIAL_COMMIT;
@@ -640,11 +647,13 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
 }
 
 void ConnManager::dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> pElement){
+    // Queue this message again if it comes too early
     if(pRound2_current_status == nullptr || pRound2_current_status->state == CycleState::ROUND2_WAITING_FOR_PREPREPARE){
         // Don't let the unique_ptr delete this message
         QueueElement *ptr = pElement.release();
         this->pRecvQueue->enqueue(std::move(*ptr));
 
+        sched_yield();
         return;
     }
 
@@ -677,11 +686,73 @@ void ConnManager::dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> 
 
     // Send FullCommit
     if(pRound2_current_status->message_received_counter == pRound2_current_status->message_required){
-        printf("Should send out full commit message here. Not implemented.\n");
+        char *buffer = new char[sizeof(MessageRound2FullCommit)];
+        MessageRound2FullCommit *pFullC = (MessageRound2FullCommit *)buffer;
+
+        pFullC->header.version = VERSION_LATEST;
+        pFullC->header.msgType = MESSAGE_ROUND2_FULL_COMMIT;
+        pFullC->header.payloadLen = sizeof(MessageRound2FullCommit) - sizeof(MessageHeader);
+
+        pFullC->sender = m_upConfig->SLid;
+        pFullC->view = pRound2_current_status->round2_view;
+        pFullC->seq = pRound2_current_status->round2_sequence;
+
+        memset(pFullC->combinedSignature, 0, sizeof(pFullC->combinedSignature));
+
+        QueueElement element;
+        element.pMessage = (MessageHeader *)buffer;
+
+        // Broadcast
+        for(int sl = 0; sl < m_upConfig->numSL(m_upConfig->BGid); ++sl){
+            if(sl == m_upConfig->SLid){
+                continue;
+            }
+
+            element.upPeers->push_front(&rgrgConnection[m_upConfig->BGid][sl]);
+        }
+
+        // Don't forget to send a copy to myself
+        element.upPeers->push_front(nullptr);
+        
+        pSendQueue->enqueue(std::move(element));
+
+        pRound2_current_status->awaiting_message_type = MESSAGE_ROUND2_FULL_COMMIT;
+        pRound2_current_status->message_received_counter = 0;
+        pRound2_current_status->message_required = 1;
+        pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_FULLCOMMIT;
     }
 }
 
 void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pElement){
+    // Queue this message again if it comes too early
+    if(pRound2_current_status == nullptr || pRound2_current_status->state == CycleState::ROUND2_WAITING_FOR_PREPREPARE){
+        // Don't let the unique_ptr delete this message
+        QueueElement *ptr = pElement.release();
+        this->pRecvQueue->enqueue(std::move(*ptr));
+
+        sched_yield();
+        return;
+    }
+
+    DebugThrowElseReturnVoid(pRound2_current_status->state == CycleState::ROUND2_WAITING_FOR_FULLCOMMIT);
+
+    MessageRound2FullCommit* pFullC = (MessageRound2FullCommit *)pElement->pMessage;
+    DebugThrowElseReturnVoid(pFullC->view == pRound2_current_status->round2_view);
+    DebugThrowElseReturnVoid(pFullC->seq == pRound2_current_status->round2_sequence);
+
+    // Neglected: Should verify the combined signature contains a signature from everyone in this BG
+
+    DebugThrowElseReturnVoid(pRound2_current_status->committedResult[m_upConfig->BGid] == nullptr);
+
+    if(pTemporaryStorageOfPreprepare == nullptr){
+        throw Exception(Exception::EXCEPTION_PREPREPARE_MISSING);
+    }
     
+    pRound2_current_status->committedResult[m_upConfig->BGid].swap(pTemporaryStorageOfPreprepare);
+
+    // TODO: pass to round 3
+    MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pRound2_current_status->committedResult[m_upConfig->BGid]->pMessage;
+    printf("Cycle %hu has committed in Round 2. Should start Round 3. Not implemented.\n", pPreprepare->cycle);
+    pRound2_current_status = nullptr;
 }
 

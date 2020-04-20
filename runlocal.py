@@ -9,7 +9,7 @@ def parse_temp(filename):
     with open(filename, 'r') as fin:
         lines = fin.readlines()
 
-    pos = 0
+    pos = 1
     
     segs = lines[pos].split(' ')
     total_BG = int(segs[0].strip().strip('\n'))

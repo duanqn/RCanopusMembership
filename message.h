@@ -126,6 +126,7 @@ struct MessageRound2Preprepare{
     uint16_t sender;
     uint16_t view;
     uint16_t seq;
+    uint16_t BGid;
     uint16_t cycle;
     uint16_t lastcycle;
     uint16_t collector_SLid;
@@ -140,6 +141,7 @@ struct MessageRound2Preprepare_BE{
     uint16_t sender;
     uint16_t view;
     uint16_t seq;
+    uint16_t BGid;
     uint16_t cycle;
     uint16_t lastcycle;
     uint16_t collector_SLid;

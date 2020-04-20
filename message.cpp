@@ -52,6 +52,7 @@ MessageRound2Preprepare_BE *MessageRound2Preprepare::serialize(MessageRound2Prep
     toBE(&p->sender);
     toBE(&p->view);
     toBE(&p->seq);
+    toBE(&p->BGid);
     toBE(&p->cycle);
     toBE(&p->lastcycle);
     toBE(&p->collector_SLid);
@@ -70,6 +71,7 @@ MessageRound2Preprepare *MessageRound2Preprepare_BE::partialDeserialize(MessageR
     fromBE(&p->sender);
     fromBE(&p->view);
     fromBE(&p->seq);
+    fromBE(&p->BGid);
     fromBE(&p->cycle);
     fromBE(&p->lastcycle);
     fromBE(&p->collector_SLid);

@@ -501,6 +501,7 @@ void ConnManager::leader_round2_sendPreprepare(){
     // because this Preprepare message will be delivered to the leader too
     // The leader will then check the view and seq and update them
 
+    pPreprepare->BGid = (uint16_t)m_upConfig->BGid;
     // No SkipCycle
     pPreprepare->lastcycle = leader_round2_next_rcanopus_cycle - 1;
     pPreprepare->cycle = leader_round2_next_rcanopus_cycle;
@@ -754,5 +755,9 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
     MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pRound2_current_status->committedResult[m_upConfig->BGid]->pMessage;
     printf("Cycle %hu has committed in Round 2. Should start Round 3. Not implemented.\n", pPreprepare->cycle);
     pRound2_current_status = nullptr;
+
+    if(m_upConfig->SLid == 0 && canStartRound2()){
+        leader_round2_sendPreprepare();
+    }
 }
 

@@ -18,6 +18,8 @@
 #include "poll.h"
 #include <queue>
 #include "CycleStatus.h"
+#include <mutex>
+#include <condition_variable>
 
 using SigVerifier = bool (*)(char const *, size_t, char const *, size_t);
 
@@ -35,9 +37,12 @@ class ConnManager {
     moodycamel::BlockingConcurrentQueue<QueueElement> *pRecvQueue;
     moodycamel::BlockingConcurrentQueue<QueueElement> *pSendQueue;
 
-    std::unordered_map<int, CycleStatus> mapRound3Status;
+    std::unordered_map<uint16_t, std::unique_ptr<CycleStatus>> mapRound3Status;
+    std::map<uint16_t, std::chrono::time_point<std::chrono::steady_clock>> mapCycleSubmissionTime;
 
     int *rgLeader_batch_received_from;
+    int leader_batch_received_from_self;
+    int leader_send_to_self_pipe[2];
     int leader_batch_processed; // sent out preprepare
     uint16_t leader_round2_next_rcanopus_cycle;
     uint16_t round2_next_view;
@@ -70,6 +75,8 @@ class ConnManager {
     }
 
     bool canStartRound2();
+    bool isPrimaryEnvoyRound3(uint16_t cycle);
+    bool isBackupEnvoyRound3(uint16_t cycle);
 
     int listenForIncomingConnections(int boundSocket);
 
@@ -77,8 +84,11 @@ class ConnManager {
     void listener();
     void sender();
     void mockClient(std::chrono::milliseconds interval);
+    void mockClientOnLeader(std::chrono::milliseconds interval);
 
     void leader_round2_sendPreprepare();
+    void envoy_round3_sendFetchRequest(uint16_t cycle);
+    void round3_committed(uint16_t cycle);
 
     public:
     ConnManager(const Config &conf);

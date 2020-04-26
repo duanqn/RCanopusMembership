@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <fcntl.h>
 
 char * ConnManager::recvMessage_caller_free_mem(int sock){
     char headerBuf[sizeof(MessageHeader)];
@@ -126,6 +127,7 @@ int ConnManager::listenForIncomingConnections(int boundSocket){
     return 0;
 }
 
+// Constructor
 ConnManager::ConnManager(const Config &conf):
     pRecvQueue(nullptr),
     pSendQueue(nullptr),
@@ -136,12 +138,14 @@ ConnManager::ConnManager(const Config &conf):
     rgPoll(nullptr),
     rgPollSlotToConnection(nullptr),
     rgLeader_batch_received_from(nullptr),
+    leader_batch_received_from_self(0),
     leader_batch_processed(0),
     pRound2_current_status(nullptr),
     leader_round2_next_rcanopus_cycle(1u),
     round2_next_view(1u),
     round2_next_seq(1u),
     mapRound3Status(),
+    mapCycleSubmissionTime(),
     pTemporaryStorageOfPreprepare(nullptr),
     leader_envoys_rr(1),
     leader_collector_rr(1),
@@ -255,28 +259,61 @@ ConnManager::ConnManager(const Config &conf):
         }
 
         leader_batch_processed = 0;
+
+        rgPoll[numOfRemotePeers].fd = leader_send_to_self_pipe[PIPE_READ];
+        rgPoll[numOfRemotePeers].events = POLLIN;
+        rgPoll[numOfRemotePeers].revents = 0;
     }
 }
 
 void ConnManager::listener(){
     int indexExit = numOfRemotePeers;
+    int numfd = numOfRemotePeers;
+    if(isRound2Leader()){
+        // leader_send_to_self_pipe
+        numfd++;
+    }
+
     while(true){
         // TODO: listen for (numOfRemotePeers + 1) fds
-        poll(rgPoll, numOfRemotePeers, -1);
+        poll(rgPoll, numfd, -1);
 
         // TODO: check rgPoll[indexExit] first
 
-        for(int i = 0; i < numOfRemotePeers; ++i){
+        for(int i = 0; i < numfd; ++i){
             if(rgPoll[i].revents != 0){
                 if(rgPoll[i].revents & POLLIN != 0){
-                    // recv packet
-                    char *pMessage = recvMessage_caller_free_mem(rgPoll[i].fd);
-                    QueueElement element;
-                    element.pMessage = (MessageHeader *)pMessage;
-                    element.upPeers->push_front(rgPollSlotToConnection[i]);
-                    pRecvQueue->enqueue(std::move(element));
-                    
-                    // Neglected: verify sender field (if the message has such a field)
+                    if(i == numOfRemotePeers){
+                        // This is leader_send_to_self_pipe
+                        bool finished = false;
+                        do{
+                            char buffer[PIPE_READ_BUFFER];
+                            ssize_t readsize = read(leader_send_to_self_pipe[PIPE_READ], buffer, PIPE_READ_BUFFER);
+                            if(readsize == -1 && (errno == EWOULDBLOCK || errno == EAGAIN)){
+                                finished = true;
+                            }
+                            else if(readsize < PIPE_READ_BUFFER){
+                                finished = true;
+                            }
+                            else{
+                                throw Exception(Exception::EXCEPTION_RECV);
+                            }
+                        }while(!finished);
+
+                        if(m_upConfig->SLid == 0 && canStartRound2()){
+                            leader_round2_sendPreprepare();
+                        }
+                    }
+                    else{
+                        // recv packet
+                        char *pMessage = recvMessage_caller_free_mem(rgPoll[i].fd);
+                        QueueElement element;
+                        element.pMessage = (MessageHeader *)pMessage;
+                        element.upPeers->push_front(rgPollSlotToConnection[i]);
+                        pRecvQueue->enqueue(std::move(element));
+                        
+                        // Neglected: verify sender field (if the message has such a field)
+                    }
                 }
                 else if(rgPoll[i].revents & POLLHUP != 0){
                     close(rgPoll[i].fd);
@@ -295,7 +332,7 @@ void ConnManager::listener(){
 void ConnManager::mockClient(std::chrono::milliseconds interval){
     int BGid = m_upConfig->BGid;
     PeerConnection *pLeader = &rgrgConnection[BGid][0];
-    while(true){
+    for(uint16_t cycle = 1u; ; cycle++){
         size_t size = sizeof(MessageRound2Request)+ REQUEST_BATCH_SIZE;
         char *buffer = new char[size];
         MessageRound2Request *pRequest = (MessageRound2Request *)buffer;
@@ -309,6 +346,23 @@ void ConnManager::mockClient(std::chrono::milliseconds interval){
         element.upPeers->push_front(pLeader);
         
         pSendQueue->enqueue(std::move(element));
+
+        // Currently every cycle contains a request batch from every SL
+        mapCycleSubmissionTime[cycle] = std::chrono::steady_clock::now();
+        std::this_thread::sleep_for(interval);
+    }
+}
+
+void ConnManager::mockClientOnLeader(std::chrono::milliseconds interval){
+    for(uint16_t cycle = 1u; ; cycle++){
+        // Currently every cycle contains a request batch from every SL
+        mapCycleSubmissionTime[cycle] = std::chrono::steady_clock::now();
+        leader_batch_received_from_self++;
+
+        if(write(leader_send_to_self_pipe[PIPE_WRITE], &cycle, sizeof(cycle)) == -1){
+            throw Exception(Exception::EXCEPTION_SEND);
+        }
+        
         std::this_thread::sleep_for(interval);
     }
 }
@@ -387,22 +441,35 @@ bool ConnManager::canStartRound2(){
             }
         }
 
+        if(leader_batch_received_from_self <= leader_batch_processed){
+            return false;
+        }
+
         return true;
     }
     return false;
 }
 
 void ConnManager::start(){
+    if(isRound2Leader()){
+        if(pipe2(leader_send_to_self_pipe, O_NONBLOCK) == -1){
+            throw Exception(Exception::EXCEPTION_PIPE_CREATION);
+        }
+    }
+
     std::function<void(void)> funcListen = std::bind(&ConnManager::listener, this);
     AlgoLib::Util::AsyncExecution listenerJob(std::forward<decltype(funcListen)>(funcListen));
     std::function<void(void)> funcSend = std::bind(&ConnManager::sender, this);
     AlgoLib::Util::AsyncExecution senderJob(std::forward<decltype(funcSend)>(funcSend));
 
-    std::function<void(void)> funcClient = std::bind(&ConnManager::mockClient, this, REQUEST_BATCH_INTERVAL);
     AlgoLib::Util::AsyncExecution<std::function<void(void)>> *pClientJob = nullptr;
 
-    if(!isRound2Leader()){
-        // Not BG leader
+    if(isRound2Leader()){
+        std::function<void(void)> funcClient = std::bind(&ConnManager::mockClientOnLeader, this, REQUEST_BATCH_INTERVAL);
+        pClientJob = new AlgoLib::Util::AsyncExecution<std::function<void(void)>> (std::forward<std::function<void(void)>>(funcClient));
+    }
+    else{
+        std::function<void(void)> funcClient = std::bind(&ConnManager::mockClient, this, REQUEST_BATCH_INTERVAL);
         pClientJob = new AlgoLib::Util::AsyncExecution<std::function<void(void)>> (std::forward<std::function<void(void)>>(funcClient));
     }
 
@@ -502,10 +569,12 @@ void ConnManager::leader_round2_sendPreprepare(){
     // The leader will then check the view and seq and update them
 
     pPreprepare->BGid = (uint16_t)m_upConfig->BGid;
+    pPreprepare->requestType = REQUEST_TYPE_FROM_CLIENT;
     // No SkipCycle
     pPreprepare->lastcycle = leader_round2_next_rcanopus_cycle - 1;
     pPreprepare->cycle = leader_round2_next_rcanopus_cycle;
     leader_round2_next_rcanopus_cycle++;
+    leader_batch_processed++;
 
     // Round-robin select collector excluding the leader
     pPreprepare->collector_SLid = leader_collector_rr;
@@ -590,6 +659,8 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     MessageRound2Preprepare* pPreprepare = (MessageRound2Preprepare *)pElement->pMessage;
     DebugThrowElseReturnVoid(pPreprepare->view == round2_next_view);    // May need to change if allow ViewChange
     DebugThrowElseReturnVoid(pPreprepare->seq == round2_next_seq);  // May need to change if allow ViewChange
+
+    DebugThrow(pPreprepare->requestType == REQUEST_TYPE_FROM_CLIENT);
 
     pRound2_current_status->round2_sequence = pPreprepare->seq;
     pRound2_current_status->round2_view = pPreprepare->view;
@@ -743,21 +814,189 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
 
     // Neglected: Should verify the combined signature contains a signature from everyone in this BG
 
-    DebugThrowElseReturnVoid(pRound2_current_status->committedResult[m_upConfig->BGid] == nullptr);
+    
 
     if(pTemporaryStorageOfPreprepare == nullptr){
         throw Exception(Exception::EXCEPTION_PREPREPARE_MISSING);
     }
     
-    pRound2_current_status->committedResult[m_upConfig->BGid].swap(pTemporaryStorageOfPreprepare);
+    pRound2_current_status->state = CycleState::ROUND2_COMMITTED;
+    // TODO: set awaiting_msg_type and so on
 
     // TODO: pass to round 3
-    MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pRound2_current_status->committedResult[m_upConfig->BGid]->pMessage;
-    printf("Cycle %hu has committed in Round 2. Should start Round 3. Not implemented.\n", pPreprepare->cycle);
-    pRound2_current_status = nullptr;
+    MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pTemporaryStorageOfPreprepare->pMessage;
+    
+    switch(pPreprepare->requestType){
+        case REQUEST_TYPE_FROM_CLIENT:
+        break;
+        default:
+        throw Exception(Exception::EXCEPTION_MESSAGE_INVALID_REQUEST_TYPE);
+    }
+
+    for(uint16_t cycleNumber = pPreprepare->lastcycle + 1; cycleNumber < pPreprepare->cycle; ++cycleNumber){
+        // Skipped cycles
+        DebugThrow(false);  // We haven't implemented SkipCycle;
+
+        // Forge a copy of the empty message
+        size_t preprepareSize = getMessageSize((MessageHeader *)pPreprepare);
+        size_t emptyMsgSize = sizeof(MessageRound2Preprepare) + pPreprepare->numOfRound3Participants * sizeof(uint16_t);
+        char *buffer = new char[emptyMsgSize];
+        AlgoLib::Util::TCleanup t([&buffer]{
+            delete[] buffer;
+        });
+        memcpy(buffer, pPreprepare, emptyMsgSize);
+
+        // Manually copy the CycleStatus
+        MessageRound2Preprepare *pEmptyMsg = (MessageRound2Preprepare *)buffer;
+        std::unique_ptr<CycleStatus> pMoveToRound3 = std::make_unique<CycleStatus>(m_upConfig->numBG());
+        pMoveToRound3->round2_view = pRound2_current_status->round2_view;
+        pMoveToRound3->round2_sequence = pRound2_current_status->round2_sequence;
+        pMoveToRound3->awaiting_message_type = pRound2_current_status->awaiting_message_type;
+        pMoveToRound3->state = CycleState::ROUND2_COMMITTED;
+        pMoveToRound3->message_received_counter = pRound2_current_status->message_received_counter;
+        pMoveToRound3->message_required = pRound2_current_status->message_required;
+
+        MessageRound3FetchResponse *pFetchResponse = getRound3Response_caller_free_mem(pEmptyMsg, pFullC, m_upConfig->SLid);
+
+        std::unique_ptr<QueueElement> upElement = std::make_unique<QueueElement>();
+        upElement->pMessage = (MessageHeader *)pFetchResponse;
+        pMoveToRound3->committedResult[m_upConfig->BGid] = std::move(upElement);
+
+        DebugThrow(mapRound3Status.find(cycleNumber) == mapRound3Status.end());
+        mapRound3Status[cycleNumber] = std::move(pMoveToRound3);
+        envoy_round3_sendFetchRequest(cycleNumber);
+    }
+
+    uint16_t cycleNumber = pPreprepare->cycle;
+    MessageRound3FetchResponse *pFetchResponse = getRound3Response_caller_free_mem(pPreprepare, pFullC, m_upConfig->SLid);
+    
+    DebugThrowElseReturnVoid(pRound2_current_status->committedResult[m_upConfig->BGid] == nullptr);
+    std::unique_ptr<QueueElement> upElement = std::make_unique<QueueElement>();
+    upElement->pMessage = (MessageHeader *)pFetchResponse;
+    pRound2_current_status->committedResult[m_upConfig->BGid] = std::move(upElement);
+
+    std::unique_ptr<CycleStatus> pMoveToRound3 = nullptr;
+    pRound2_current_status.swap(pMoveToRound3);
+    pTemporaryStorageOfPreprepare = nullptr;
+
+    DebugThrow(mapRound3Status.find(cycleNumber) == mapRound3Status.end());
+    mapRound3Status[cycleNumber] = std::move(pMoveToRound3);
+    envoy_round3_sendFetchRequest(cycleNumber);
 
     if(m_upConfig->SLid == 0 && canStartRound2()){
         leader_round2_sendPreprepare();
+    }
+}
+
+bool ConnManager::isPrimaryEnvoyRound3(uint16_t cycle){
+    auto it = mapRound3Status.find(cycle);
+    if(it == mapRound3Status.end()){
+        throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+    }
+
+    MessageRound3FetchResponse *pFetchResponse = (MessageRound3FetchResponse *)(it->second->committedResult[m_upConfig->BGid]->pMessage);
+
+    MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pFetchResponse->entirePreprepareMsg;
+
+    uint16_t numEnvoy = pPreprepare->numOfRound3Participants;
+    uint16_t *pEnvoy = (uint16_t *)pPreprepare->participantsAndContent;
+    if(numEnvoy == 0){
+        throw Exception(Exception::EXCEPTION_NO_ENVOY_SELECTED);
+    }
+
+    return *pEnvoy == m_upConfig->SLid;
+}
+
+bool ConnManager::isBackupEnvoyRound3(uint16_t cycle){
+    auto it = mapRound3Status.find(cycle);
+    if(it == mapRound3Status.end()){
+        throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+    }
+
+    MessageRound3FetchResponse *pFetchResponse = (MessageRound3FetchResponse *)(it->second->committedResult[m_upConfig->BGid]->pMessage);
+
+    MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pFetchResponse->entirePreprepareMsg;
+
+    uint16_t numEnvoy = pPreprepare->numOfRound3Participants;
+    uint16_t *pEnvoy = (uint16_t *)pPreprepare->participantsAndContent;
+    if(numEnvoy == 0){
+        throw Exception(Exception::EXCEPTION_NO_ENVOY_SELECTED);
+    }
+    else if(numEnvoy == 1){
+        return false;
+    }
+    
+    pEnvoy++;   // Skip the primary envoy
+    for(int i = 1; i < numEnvoy; ++i){
+        if(*pEnvoy == m_upConfig->SLid){
+            return true;
+        }
+
+        pEnvoy++;
+    }
+
+    return false;
+}
+
+// This function is executed by everyone but only the envoys will send out messages
+void ConnManager::envoy_round3_sendFetchRequest(uint16_t cycle){
+    auto it = mapRound3Status.find(cycle);
+    if(it == mapRound3Status.end()){
+        throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+    }
+
+    if(it->second->state != CycleState::ROUND2_COMMITTED){
+        throw Exception(Exception::EXCEPTION_UNEXPECTED_CYCLE_STATE);
+    }
+
+    if(m_upConfig->numBG() == 1){
+        // There is no remote BG
+        it->second->state = CycleState::ROUND3_COMMITTED;
+        it->second->awaiting_message_type = MESSAGE_INVALID;
+        it->second->message_required = 0;
+        it->second->message_received_counter = 0;
+        round3_committed(cycle);
+
+        return;
+    }
+
+    if(isPrimaryEnvoyRound3(cycle)){
+
+    }
+    else if(isBackupEnvoyRound3(cycle)){
+
+    }
+}
+
+void ConnManager::round3_committed(uint16_t cycle){
+    auto it = mapRound3Status.find(cycle);
+    if(it == mapRound3Status.end()){
+        throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+    }
+
+    if(it->second->state != CycleState::ROUND3_COMMITTED){
+        throw Exception(Exception::EXCEPTION_UNEXPECTED_CYCLE_STATE);
+    }
+
+    #ifdef DEBUG_PRINT
+    printf("Cycle %hu committed in Round 3!\n", cycle);
+    #endif
+
+    // Erase the cycle status
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> latency_ms = now - mapCycleSubmissionTime[cycle];
+
+    printf("Cycle %hu latency on BG %d SL %d: %lf ms\n", cycle, m_upConfig->BGid, m_upConfig->SLid, latency_ms.count());
+    
+    mapRound3Status.erase(it);
+    mapCycleSubmissionTime.erase(cycle);
+
+    if(cycle > 20u){
+        DebugFailFast();
+    }
+
+    if(latency_ms.count() > 1000){
+        throw latency_ms.count();
     }
 }
 

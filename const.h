@@ -20,4 +20,17 @@ const static int MAX_ROUND3_CYCLES = 10;
 
 const static void *POINTER_TO_SELF = nullptr;
 
+const static uint16_t REQUEST_TYPE_FROM_CLIENT = 0;
+const static uint16_t REQUEST_TYPE_FETCHED_RESULT = 1;
+const static uint16_t REQUEST_TYPE_LOCAL_CONNECTIVITY = 2;
+const static uint16_t REQUEST_TYPE_FULL_CONNECTIVITY = 3;
+
+const static std::chrono::milliseconds TIMEOUT_EMULATOR(5000);
+const static std::chrono::milliseconds TIMEOUT_ENVOY(5000);
+
+const int PIPE_READ = 0;
+const int PIPE_WRITE = 1;
+
+const size_t PIPE_READ_BUFFER = 64;
+
 #endif

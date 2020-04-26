@@ -362,7 +362,7 @@ void ConnManager::mockClientOnLeader(std::chrono::milliseconds interval){
         if(write(leader_send_to_self_pipe[PIPE_WRITE], &cycle, sizeof(cycle)) == -1){
             throw Exception(Exception::EXCEPTION_SEND);
         }
-        
+
         std::this_thread::sleep_for(interval);
     }
 }
@@ -990,13 +990,5 @@ void ConnManager::round3_committed(uint16_t cycle){
     
     mapRound3Status.erase(it);
     mapCycleSubmissionTime.erase(cycle);
-
-    if(cycle > 20u){
-        DebugFailFast();
-    }
-
-    if(latency_ms.count() > 1000){
-        throw latency_ms.count();
-    }
 }
 

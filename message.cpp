@@ -1,4 +1,5 @@
 #include "message.h"
+#include <cstring>
 
 MessageHeader_BE *MessageHeader::serialize(MessageHeader *p){
     toBE(&p->version);
@@ -47,12 +48,48 @@ size_t getMessageSize(MessageHeader *pHeader){
     return sizeof(MessageHeader) + pHeader->payloadLen;
 }
 
+MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid){
+    size_t totalSize = sizeof(MessageRound3FetchResponse) + getMessageSize((MessageHeader *)pPreprepare);
+    char *buffer = new char[totalSize];
+    MessageRound3FetchResponse *pResponse = (MessageRound3FetchResponse *)buffer;
+
+    pResponse->header.msgType = MESSAGE_ROUND3_FETCH_RESPONSE;
+    pResponse->header.version = pPreprepare->header.version;
+    pResponse->header.payloadLen = totalSize - sizeof(MessageHeader);
+
+    pResponse->sender_BGid = pPreprepare->BGid;
+    pResponse->sender_SLid = SLid; // caller need to fill in
+    memcpy(pResponse->combinedSignature, pFullC->combinedSignature, SBFT_COMBINED_SIGNATURE_SIZE);
+    memcpy(pResponse->entirePreprepareMsg, pPreprepare, getMessageSize((MessageHeader *)pPreprepare));
+
+    return pResponse;
+}
+
+MessageRound3FetchRequest* getRound3Request_caller_free_mem(MessageRound3FetchResponse *pResponse){
+    MessageRound3FetchRequest *pRequest = (MessageRound3FetchRequest *)new char[sizeof(MessageRound3FetchRequest)];
+    pRequest->header.version = pResponse->header.version;
+    pRequest->header.msgType = MESSAGE_ROUND3_FETCH_REQUEST;
+    pRequest->header.payloadLen = sizeof(MessageRound3FetchRequest) - sizeof(MessageHeader);
+
+    pRequest->sender_BGid = pResponse->sender_BGid;
+    pRequest->sender_SLid = pResponse->sender_SLid;
+    pRequest->hash.BGid = pRequest->sender_BGid;
+    MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pResponse->entirePreprepareMsg;
+    pRequest->hash.cycle = pPreprepare->cycle;
+    pRequest->hash.lastcycle = pPreprepare->lastcycle;
+    memset(pRequest->hash.hash, 0, SBFT_HASH_SIZE);
+    memcpy(pRequest->combinedSignature, pResponse->combinedSignature, SBFT_COMBINED_SIGNATURE_SIZE);
+
+    return pRequest;
+}
+
 MessageRound2Preprepare_BE *MessageRound2Preprepare::serialize(MessageRound2Preprepare *p){
     MessageHeader::serialize(&p->header);
     toBE(&p->sender);
     toBE(&p->view);
     toBE(&p->seq);
     toBE(&p->BGid);
+    toBE(&p->requestType);
     toBE(&p->cycle);
     toBE(&p->lastcycle);
     toBE(&p->collector_SLid);
@@ -72,6 +109,7 @@ MessageRound2Preprepare *MessageRound2Preprepare_BE::partialDeserialize(MessageR
     fromBE(&p->view);
     fromBE(&p->seq);
     fromBE(&p->BGid);
+    fromBE(&p->requestType);
     fromBE(&p->cycle);
     fromBE(&p->lastcycle);
     fromBE(&p->collector_SLid);

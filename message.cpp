@@ -48,7 +48,7 @@ size_t getMessageSize(MessageHeader *pHeader){
     return sizeof(MessageHeader) + pHeader->payloadLen;
 }
 
-MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid){
+MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid, uint16_t cycle){
     size_t totalSize = sizeof(MessageRound3FetchResponse) + getMessageSize((MessageHeader *)pPreprepare);
     char *buffer = new char[totalSize];
     MessageRound3FetchResponse *pResponse = (MessageRound3FetchResponse *)buffer;
@@ -59,6 +59,7 @@ MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Prepr
 
     pResponse->sender_BGid = pPreprepare->BGid;
     pResponse->sender_SLid = SLid; // caller need to fill in
+    pResponse->cycle = cycle;
     memcpy(pResponse->combinedSignature, pFullC->combinedSignature, SBFT_COMBINED_SIGNATURE_SIZE);
     memcpy(pResponse->entirePreprepareMsg, pPreprepare, getMessageSize((MessageHeader *)pPreprepare));
 
@@ -77,6 +78,8 @@ MessageRound3FetchRequest* getRound3Request_caller_free_mem(MessageRound3FetchRe
     MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pResponse->entirePreprepareMsg;
     pRequest->hash.cycle = pPreprepare->cycle;
     pRequest->hash.lastcycle = pPreprepare->lastcycle;
+    pRequest->cycle = pResponse->cycle;
+    DebugThrow(pRequest->cycle > pRequest->hash.lastcycle && pRequest->cycle <= pRequest->hash.cycle);
     memset(pRequest->hash.hash, 0, SBFT_HASH_SIZE);
     memcpy(pRequest->combinedSignature, pResponse->combinedSignature, SBFT_COMBINED_SIGNATURE_SIZE);
 
@@ -155,4 +158,82 @@ MessageRound2FullCommit *MessageRound2FullCommit_BE::partialDeserialize(MessageR
     fromBE(&p->seq);
 
     return (MessageRound2FullCommit *)p;
+}
+
+MessageRound3FetchRequest_BE *MessageRound3FetchRequest::serialize(MessageRound3FetchRequest *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender_BGid);
+    toBE(&p->sender_SLid);
+    toBE(&p->cycle);
+    toBE(&p->hash.BGid);
+    toBE(&p->hash.cycle);
+    toBE(&p->hash.lastcycle);
+
+    return (MessageRound3FetchRequest_BE *)p;
+}
+
+MessageRound3FetchRequest *MessageRound3FetchRequest_BE::partialDeserialize(MessageRound3FetchRequest_BE *p){
+    fromBE(&p->sender_BGid);
+    fromBE(&p->sender_SLid);
+    fromBE(&p->cycle);
+    fromBE(&p->hash.BGid);
+    fromBE(&p->hash.cycle);
+    fromBE(&p->hash.lastcycle);
+
+    return (MessageRound3FetchRequest *)p;
+}
+
+MessageRound3FetchResponse_BE *MessageRound3FetchResponse::serialize(MessageRound3FetchResponse *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender_BGid);
+    toBE(&p->sender_SLid);
+    toBE(&p->cycle);
+
+    return (MessageRound3FetchResponse_BE *)p;
+}
+
+MessageRound3FetchResponse *MessageRound3FetchResponse_BE::partialDeserialize(MessageRound3FetchResponse_BE *p){
+    fromBE(&p->sender_BGid);
+    fromBE(&p->sender_SLid);
+    fromBE(&p->cycle);
+
+    return (MessageRound3FetchResponse *)p;
+}
+
+MessageRound3GeneralFetch_BE * MessageRound3GeneralFetch::serialize(MessageRound3GeneralFetch *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender_BGid);
+    toBE(&p->sender_SLid);
+    toBE(&p->cycle);
+    toBE(&p->msgTypeDemanded);
+
+    return (MessageRound3GeneralFetch_BE *)p;
+}
+
+MessageRound3GeneralFetch * MessageRound3GeneralFetch_BE::partialDeserialize(MessageRound3GeneralFetch_BE *p){
+    fromBE(&p->sender_BGid);
+    fromBE(&p->sender_SLid);
+    fromBE(&p->cycle);
+    fromBE(&p->msgTypeDemanded);
+
+    return (MessageRound3GeneralFetch *)p;
+}
+
+MessageRound3FullMembership_BE * MessageRound3FullMembership::serialize(MessageRound3FullMembership *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender_BGid);
+    toBE(&p->sender_SLid);
+    toBE(&p->cycle);
+    toBE(&p->totalBGnum);
+
+    return (MessageRound3FullMembership_BE *)p;
+}
+
+MessageRound3FullMembership * MessageRound3FullMembership_BE::partialDeserialize(MessageRound3FullMembership_BE *p){
+    fromBE(&p->sender_BGid);
+    fromBE(&p->sender_SLid);
+    fromBE(&p->cycle);
+    fromBE(&p->totalBGnum);
+
+    return (MessageRound3FullMembership *)p;
 }

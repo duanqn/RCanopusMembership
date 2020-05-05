@@ -20,6 +20,8 @@
 #include "CycleStatus.h"
 #include <mutex>
 #include <condition_variable>
+#include "MockStorage.h"
+#include <random>
 
 using SigVerifier = bool (*)(char const *, size_t, char const *, size_t);
 
@@ -36,8 +38,14 @@ class ConnManager {
 
     moodycamel::BlockingConcurrentQueue<QueueElement> *pRecvQueue;
     moodycamel::BlockingConcurrentQueue<QueueElement> *pSendQueue;
+    
+    std::random_device m_device;
+    std::default_random_engine m_engine;
 
     std::unordered_map<uint16_t, std::unique_ptr<CycleStatus>> mapRound3Status;
+    std::map<uint16_t, std::vector<std::pair<uint16_t, uint16_t>>> mapRound3PendingFetchRequests;
+    std::map<uint16_t, std::vector<std::pair<uint16_t, uint16_t>>> mapRound3PendingConnectivityRequests;
+    std::map<uint16_t, std::vector<std::pair<uint16_t, uint16_t>>> mapRound3PendingMembershipRequests;
     std::map<uint16_t, std::chrono::time_point<std::chrono::steady_clock>> mapCycleSubmissionTime;
 
     int *rgLeader_batch_received_from;
@@ -49,10 +57,12 @@ class ConnManager {
     uint16_t round2_next_seq;
     std::unique_ptr<CycleStatus> pRound2_current_status;
     std::unique_ptr<QueueElement> pTemporaryStorageOfPreprepare;
+    std::unique_ptr<std::priority_queue<MessageRound2Preprepare *, std::vector<MessageRound2Preprepare *>, bool(*)(MessageRound2Preprepare *, MessageRound2Preprepare *)>> pLeaderRound2PendingPreprepareRaw;   // priority_queue does not support move-only types
     uint16_t leader_collector_rr;
     uint16_t leader_envoys_rr;
     bool round2_isCollector;
     SigVerifier round2_verifier;
+    std::unique_ptr<MockStorage> pStorage;
     
     // Make sure you are not checking your own ID
     bool isPassiveConnection(int BGid, int SLid){
@@ -62,6 +72,7 @@ class ConnManager {
         else if(BGid == m_upConfig->BGid){
             return SLid > m_upConfig->SLid;
         }
+        return false;
     }
 
     // Make sure you are not checking your own ID
@@ -77,6 +88,7 @@ class ConnManager {
     bool canStartRound2();
     bool isPrimaryEnvoyRound3(uint16_t cycle);
     bool isBackupEnvoyRound3(uint16_t cycle);
+    std::unique_ptr<std::forward_list<PeerConnection*> > getOneSLFromEveryRemoteBG();
 
     int listenForIncomingConnections(int boundSocket);
 
@@ -88,6 +100,11 @@ class ConnManager {
 
     void leader_round2_sendPreprepare();
     void envoy_round3_sendFetchRequest(uint16_t cycle);
+    void envoy_round3_sendFetchConnectivityRequest(uint16_t cycle);
+    void envoy_round3_sendFetchMembershipRequest(uint16_t cycle);
+    void round3_respondToPendingFetchRequests(uint16_t cycle);
+    void round3_respondToPendingFetchConnectivityRequests(uint16_t cycle);
+    void round3_respondToPendingFetchMembershipRequests(uint16_t cycle);
     void round3_committed(uint16_t cycle);
 
     public:
@@ -123,6 +140,13 @@ class ConnManager {
     virtual void dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pElement);
     virtual void dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> pElement);
     virtual void dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fetchRequest(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fetchResponse(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_generalFetchRequest(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fetchConnectivityRequest(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fetchConnectivityResponse(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fetchMembershipRequest(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fetchMembershipResponse(std::unique_ptr<QueueElement> pElement);
 
 };
 #endif

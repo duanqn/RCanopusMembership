@@ -40,6 +40,12 @@ int main(){
         }
     }
 
+    #ifdef DEBUG_WAIT
+    pid_t pid = getpid();
+    printf("BG %d SL %d \t PID %d\n", config.BGid, config.SLid, pid);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    #endif
+
     std::unique_ptr<ConnManager> upMgr;
     printf("Setting up connections...\n");
     try{

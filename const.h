@@ -23,7 +23,11 @@ const static void *POINTER_TO_SELF = nullptr;
 const static uint16_t REQUEST_TYPE_FROM_CLIENT = 0;
 const static uint16_t REQUEST_TYPE_FETCHED_RESULT = 1;
 const static uint16_t REQUEST_TYPE_LOCAL_CONNECTIVITY = 2;
-const static uint16_t REQUEST_TYPE_FULL_CONNECTIVITY = 3;
+const static uint16_t REQUEST_TYPE_REMOTE_CONNECTIVITY = 3;
+const static uint16_t REQUEST_TYPE_LOCAL_MEMBERSHIP = 4;
+const static uint16_t REQUEST_TYPE_FULL_MEMBERSHIP = 5;
+
+const static uint16_t INVALID_SENDER_ID = 0xFFFF;
 
 const static std::chrono::milliseconds TIMEOUT_EMULATOR(5000);
 const static std::chrono::milliseconds TIMEOUT_ENVOY(5000);

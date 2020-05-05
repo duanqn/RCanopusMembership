@@ -47,6 +47,9 @@ const static uint16_t MESSAGE_ROUND2_PARTIAL_COMMIT = MESSAGE_ROUND2_PREPREPARE 
 const static uint16_t MESSAGE_ROUND2_FULL_COMMIT = MESSAGE_ROUND2_PARTIAL_COMMIT + 1;
 const static uint16_t MESSAGE_ROUND3_FETCH_REQUEST = MESSAGE_ROUND2_FULL_COMMIT + 1;
 const static uint16_t MESSAGE_ROUND3_FETCH_RESPONSE = MESSAGE_ROUND3_FETCH_REQUEST + 1;
+const static uint16_t MESSAGE_ROUND3_GENERAL_FETCH = MESSAGE_ROUND3_FETCH_RESPONSE + 1;
+const static uint16_t MESSAGE_ROUND3_CONNECTIVITY_RESPONSE = MESSAGE_ROUND3_GENERAL_FETCH + 1;
+const static uint16_t MESSAGE_ROUND3_MEMBERSHIP_RESPONSE = MESSAGE_ROUND3_CONNECTIVITY_RESPONSE + 1;
 
 struct MessageHeader;
 struct MessageHeader_BE;
@@ -221,6 +224,7 @@ struct MessageRound3FetchRequest{
     MessageHeader header;
     uint16_t sender_BGid;
     uint16_t sender_SLid;
+    uint16_t cycle; // cycle to fetch
     CompoundHash hash;
     char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'hash'
 
@@ -231,11 +235,14 @@ struct MessageRound3FetchRequest_BE{
     MessageHeader header;
     uint16_t sender_BGid;
     uint16_t sender_SLid;
+    uint16_t cycle; // cycle to fetch
     CompoundHash hash;
     char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'hash'
 
     static MessageRound3FetchRequest* partialDeserialize(MessageRound3FetchRequest_BE *p);
 };
+
+static_assert(sizeof(MessageRound3FetchRequest_BE) == sizeof(MessageRound3FetchRequest));
 
 struct MessageRound3FetchResponse;
 struct MessageRound3FetchResponse_BE;
@@ -244,6 +251,7 @@ struct MessageRound3FetchResponse{
     MessageHeader header;
     uint16_t sender_BGid;
     uint16_t sender_SLid;
+    uint16_t cycle;
     char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'entirePreprepareMsg'
     char entirePreprepareMsg[];
 
@@ -254,13 +262,14 @@ struct MessageRound3FetchResponse_BE{
     MessageHeader header;
     uint16_t sender_BGid;
     uint16_t sender_SLid;
+    uint16_t cycle;
     char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'entirePreprepareMsg'
     char entirePreprepareMsg[];
 
     static MessageRound3FetchResponse *partialDeserialize(MessageRound3FetchResponse_BE *p);
 };
 
-static_assert(sizeof(MessageRound3FetchResponse) == sizeof(MessageRound3FetchResponse_BE));
+static_assert(sizeof(MessageRound3FetchResponse_BE) == sizeof(MessageRound3FetchResponse));
 
 struct ConnectivityInfo{
     uint16_t BGid;
@@ -268,30 +277,35 @@ struct ConnectivityInfo{
     bool reachable[];
 };
 
-struct MessageRound3Connectivity;
-struct MessageRound3Connectivity_BE;
-
-struct MessageRound3Connectivity{
-    MessageHeader header;
-    uint16_t sender_BGid;
-    uint16_t sender_SLid;
-    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'info'
-    ConnectivityInfo info;
-
-    static MessageRound3Connectivity_BE *serialize(MessageRound3Connectivity *p);
-};
-
-struct MessageRound3Connectivity_BE{
-    MessageHeader header;
-    uint16_t sender_BGid;
-    uint16_t sender_SLid;
-    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'info'
-    ConnectivityInfo info;
-
-    static MessageRound3Connectivity *partialDeserialize(MessageRound3Connectivity_BE *p);
-};
+typedef MessageRound3FetchResponse MessageRound3Connectivity;
+typedef MessageRound3FetchResponse_BE MessageRound3Connectivity_BE;
 
 static_assert(sizeof(MessageRound3Connectivity_BE) == sizeof(MessageRound3Connectivity));
+
+struct MessageRound3GeneralFetch;
+struct MessageRound3GeneralFetch_BE;
+
+struct MessageRound3GeneralFetch{
+    MessageHeader header;
+    uint16_t sender_BGid;
+    uint16_t sender_SLid;
+    uint16_t cycle;
+    uint16_t msgTypeDemanded;
+
+    static MessageRound3GeneralFetch_BE *serialize(MessageRound3GeneralFetch *p);
+};
+
+struct MessageRound3GeneralFetch_BE{
+    MessageHeader header;
+    uint16_t sender_BGid;
+    uint16_t sender_SLid;
+    uint16_t cycle;
+    uint16_t msgTypeDemanded;
+
+    static MessageRound3GeneralFetch *partialDeserialize(MessageRound3GeneralFetch_BE *p);
+};
+
+static_assert(sizeof(MessageRound3GeneralFetch_BE) == sizeof(MessageRound3GeneralFetch));
 
 struct MessageRound3FullMembership;
 struct MessageRound3FullMembership_BE;
@@ -300,9 +314,10 @@ struct MessageRound3FullMembership{
     MessageHeader header;
     uint16_t sender_BGid;
     uint16_t sender_SLid;
-    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'totalBGnum' & 'connectivityAndSignature'
+    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'cycle' 'totalBGnum' & 'connectivityAndSignature'
+    uint16_t cycle;
     uint16_t totalBGnum;
-    char connectivityAndSignature[];
+    char connectivity[];
 
     static MessageRound3FullMembership_BE *serialize(MessageRound3FullMembership *p);
 };
@@ -311,9 +326,10 @@ struct MessageRound3FullMembership_BE{
     MessageHeader header;
     uint16_t sender_BGid;
     uint16_t sender_SLid;
-    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'totalBGnum' & 'connectivityAndSignature'
+    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];   // over 'cycle' 'totalBGnum' & 'connectivityAndSignature'
+    uint16_t cycle;
     uint16_t totalBGnum;
-    char connectivityAndSignature[];
+    char connectivity[];
 
     static MessageRound3FullMembership *partialDeserialize(MessageRound3FullMembership_BE *p);
 };
@@ -323,7 +339,7 @@ static_assert(sizeof(MessageRound3FullMembership_BE) == sizeof(MessageRound3Full
 #pragma pack(pop)
 
 size_t getMessageSize(MessageHeader *pHeader);
-MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid);
+MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid, uint16_t cycle);
 MessageRound3FetchRequest* getRound3Request_caller_free_mem(MessageRound3FetchResponse *pResponse);
 
 #endif

@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <chrono>
 
+#ifdef MEM_DBG
+#include <atomic>
+#endif
+
 const static int LISTEN_BACKLOG = 5;
 const static uint16_t VERSION_1_0 = 1;
 const static uint16_t VERSION_LATEST = VERSION_1_0;
@@ -36,5 +40,9 @@ const int PIPE_READ = 0;
 const int PIPE_WRITE = 1;
 
 const size_t PIPE_READ_BUFFER = 64;
+
+#ifdef MEM_DBG
+extern std::atomic<size_t> heapalloc;
+#endif
 
 #endif

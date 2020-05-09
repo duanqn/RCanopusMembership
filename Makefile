@@ -1,4 +1,5 @@
 DEBUG=TRUE
+WAIT=FALSE
 CXXFLAGS += -std=c++17
 LDFLAGS += -lpthread
 
@@ -10,11 +11,15 @@ else
 	CXXFLAGS += -O2
 endif
 
+ifeq ($(WAIT),TRUE)
+	CXXFLAGS += -DDEBUG_WAIT
+endif
+
 .PHONY: all tests clean
 
 all: clean tests $(TARGETS)
 
-membership_server: server.o config.o PeerConnection.o Peer.o ConnManager.o message.o exception.o
+membership_server: server.o config.o PeerConnection.o Peer.o ConnManager.o message.o exception.o const.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
 tests: util_test queue_test

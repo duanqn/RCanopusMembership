@@ -51,6 +51,9 @@ size_t getMessageSize(MessageHeader *pHeader){
 MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid, uint16_t cycle){
     size_t totalSize = sizeof(MessageRound3FetchResponse) + getMessageSize((MessageHeader *)pPreprepare);
     char *buffer = new char[totalSize];
+    #ifdef MEM_DBG
+    heapalloc.fetch_add(totalSize);
+    #endif
     MessageRound3FetchResponse *pResponse = (MessageRound3FetchResponse *)buffer;
 
     pResponse->header.msgType = MESSAGE_ROUND3_FETCH_RESPONSE;
@@ -68,6 +71,9 @@ MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Prepr
 
 MessageRound3FetchRequest* getRound3Request_caller_free_mem(MessageRound3FetchResponse *pResponse){
     MessageRound3FetchRequest *pRequest = (MessageRound3FetchRequest *)new char[sizeof(MessageRound3FetchRequest)];
+    #ifdef MEM_DBG
+    heapalloc.fetch_add(sizeof(MessageRound3FetchRequest));
+    #endif
     pRequest->header.version = pResponse->header.version;
     pRequest->header.msgType = MESSAGE_ROUND3_FETCH_REQUEST;
     pRequest->header.payloadLen = sizeof(MessageRound3FetchRequest) - sizeof(MessageHeader);

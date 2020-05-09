@@ -40,16 +40,25 @@ struct QueueElement final{
     ~QueueElement(){
         if(pMessage != nullptr){
             delete[] (char *)pMessage;
+            #ifdef MEM_DBG
+            heapalloc.fetch_sub(getMessageSize(pMessage));
+            #endif
         }
     }
 
     void clone(const QueueElement &e){
         size_t messageSize = getMessageSize(e.pMessage);
         char *buffer = new char[messageSize];
+        #ifdef MEM_DBG
+        heapalloc.fetch_add(messageSize);
+        #endif
 
         // Free any occupied memory
         if(pMessage != nullptr){
             delete[] (char *)pMessage;
+            #ifdef MEM_DBG
+            heapalloc.fetch_sub(getMessageSize(pMessage));
+            #endif
         }
 
         pMessage = (MessageHeader *)buffer;

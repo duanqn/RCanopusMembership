@@ -14,6 +14,7 @@
 #include "util.h"
 #include "message.h"
 #include "blockingconcurrentqueue.h"
+#include "readerwriterqueue.h"
 #include "QueueElement.h"
 #include "poll.h"
 #include <queue>
@@ -36,8 +37,10 @@ class ConnManager {
     struct pollfd *rgPoll;
     PeerConnection** rgPollSlotToConnection;
 
-    moodycamel::BlockingConcurrentQueue<QueueElement> *pRecvQueue;
-    moodycamel::BlockingConcurrentQueue<QueueElement> *pSendQueue;
+    moodycamel::BlockingConcurrentQueue<QueueElement> recvQueue;
+    std::queue<QueueElement> juggleQueue;   // sync access only
+    moodycamel::BlockingReaderWriterQueue<QueueElement> sendQueue;
+    moodycamel::BlockingReaderWriterQueue<QueueElement> clientQueue;
     
     std::random_device m_device;
     std::default_random_engine m_engine;
@@ -85,6 +88,10 @@ class ConnManager {
         return m_upConfig->SLid == 0;
     }
 
+    inline void juggle(QueueElement element){
+        juggleQueue.push(std::move(element));
+    }
+
     bool canStartRound2();
     bool isPrimaryEnvoyRound3(uint16_t cycle);
     bool isBackupEnvoyRound3(uint16_t cycle);
@@ -118,8 +125,6 @@ class ConnManager {
         delete[] rgrgConnection;
 
         delete[] rgPoll;
-        delete pRecvQueue;
-        delete pSendQueue;
         delete[] rgPollSlotToConnection;
 
         if(rgLeader_batch_received_from != nullptr){

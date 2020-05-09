@@ -32,7 +32,7 @@ def parse_temp(filename):
 def main():
     parser = argparse.ArgumentParser(description = '')
     parser.add_argument('-f', '--template-file', type=str, dest='filename', required=False, default='config.temp')
-    parser.add_argument('-e', '--executable', type=str, dest='exe', required=False, default='membership_server')
+    parser.add_argument('-e', '--executable', type=str, dest='exe', required=False, default='membership-run.sh')
     parser.add_argument('-c', '--common-prefix', type=str, dest='prefix', required=False, default='testdir')
 
     args = parser.parse_args()
@@ -44,7 +44,8 @@ def main():
         dirname = args.prefix + str(i+1)
         
         os.chdir(os.path.join(thisdir, dirname))
-        subprocess.Popen(['./' + args.exe, 'BG'+str(SLid[i][0]), 'SL'+str(SLid[i][1])])
+        subprocess.run(['chmod', '+x', args.exe])
+        subprocess.Popen(['./' + args.exe])
 
 
 

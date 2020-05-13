@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <fcntl.h>
+#include <time.h>
 #include <random>
 
 bool cmpRequestType(MessageRound2Preprepare *px, MessageRound2Preprepare *py){
@@ -1458,7 +1459,10 @@ void ConnManager::round3_committed(uint16_t cycle){
     auto now = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> latency_ms = now - mapCycleSubmissionTime[cycle];
 
-    printf("Cycle %hu latency on BG %d SL %d: %lf ms\n", cycle, m_upConfig->BGid, m_upConfig->SLid, latency_ms.count());
+    struct timespec realtime;
+    clock_gettime(CLOCK_REALTIME, &realtime);
+
+    printf("%ld sec %ld nsec | Cycle %hu latency on BG %d SL %d: %lf ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, latency_ms.count());
     fflush(stdout); // ensure we get all logs for finished cycles
 
     mapRound3Status.erase(it);

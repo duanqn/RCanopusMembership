@@ -149,10 +149,12 @@ def main():
     for run in runs:
         dirs = duplicate(config_parameters, BGinfo, SLlist, run)
         deploy(config_parameters, dirs, SLlist, machine_file)
+        print("Start servers...")
         start(config_parameters, SLlist)
         time.sleep(run['run_time_length'])
         stop(config_parameters, SLlist)
-        collect()
+        print("Servers stopped")
+        collect(config_parameters, SLlist, run)
         delete(config_parameters, dirs, SLlist)
 
 

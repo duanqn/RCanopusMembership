@@ -84,6 +84,10 @@ def stop(config, SLlist):
     for i in range(0, len(SLlist)):
         subprocess.run(['bash', 'killRemoteProcess.sh', config['username'], SLlist[i][2], 'membership'])
 
+def clearLocalDirs(folders):
+    for folder in folders:
+        subprocess.run(['rm', '-r', folder])
+
 def collect(config, SLlist, run_dict):
     target_folder = run_dict['run_tag']
     subprocess.run(['rm', '-rf', target_folder])
@@ -165,6 +169,7 @@ def main():
             print("Servers stopped")
             collect(config_parameters, SLlist, run)
             delete(config_parameters, dirs, SLlist)
+            clearLocalDirs(dirs)
 
 
 if __name__ == "__main__":

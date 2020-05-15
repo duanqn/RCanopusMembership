@@ -96,6 +96,7 @@ def collect(config, SLlist, run_dict):
 def main():
     parser = argparse.ArgumentParser(description = '')
     parser.add_argument('-c', '--config-file', type=str, dest='config', required=True)
+    parser.add_argument('--kill-only', action='store_true', dest='killonly', required=False)
 
     args = parser.parse_args()
 
@@ -148,16 +149,22 @@ def main():
         for machine in machines:
             machine_config.write(machine + '\n')
 
-    for run in runs:
-        dirs = duplicate(config_parameters, BGinfo, SLlist, run)
-        deploy(config_parameters, dirs, SLlist, machine_file)
-        print("Start servers...")
-        start(config_parameters, SLlist)
-        time.sleep(run['run_time_length'])
-        stop(config_parameters, SLlist)
-        print("Servers stopped")
-        collect(config_parameters, SLlist, run)
-        delete(config_parameters, dirs, SLlist)
+    if(args.killonly):
+        for run in runs:
+            dirs = duplicate(config_parameters, BGinfo, SLlist, run)
+            stop(config_parameters, SLlist)
+            delete(config_parameters, dirs, SLlist)
+    else:
+        for run in runs:
+            dirs = duplicate(config_parameters, BGinfo, SLlist, run)
+            deploy(config_parameters, dirs, SLlist, machine_file)
+            print("Start servers...")
+            start(config_parameters, SLlist)
+            time.sleep(run['run_time_length'])
+            stop(config_parameters, SLlist)
+            print("Servers stopped")
+            collect(config_parameters, SLlist, run)
+            delete(config_parameters, dirs, SLlist)
 
 
 if __name__ == "__main__":

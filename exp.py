@@ -82,7 +82,7 @@ def start(config, SLlist):
 
 def stop(config, SLlist):
     for i in range(0, len(SLlist)):
-        subprocess.run(['bash', 'killRemoteProcess.sh', config['username'], SLlist[i][2], helper_script])
+        subprocess.run(['bash', 'killRemoteProcess.sh', config['username'], SLlist[i][2], 'membership'])
 
 def collect(config, SLlist, run_dict):
     for i in range(0, len(SLlist)):

@@ -6,4 +6,5 @@ server
 membership_server
 *.conf
 testdir*
+*_deploy_*
 *.temp

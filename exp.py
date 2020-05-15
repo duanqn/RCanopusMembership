@@ -12,7 +12,7 @@ def parse_temp(config):
     with open(config['template config file'], 'r') as fin:
         lines = fin.readlines()
 
-    pos = 1
+    pos = 0
     
     segs = lines[pos].split(' ')
     total_BG = int(segs[0].strip().strip('\n'))

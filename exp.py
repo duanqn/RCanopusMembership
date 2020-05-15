@@ -44,8 +44,12 @@ def duplicate(config, BGinfo, SLid, run_dict):
         subprocess.run(['cp', config['executable name'], dirname])
 
         temp_file = 'test.conf.'+str(i+1)
-        subprocess.run(['cp', config['template config file'], temp_file])
-        with open(temp_file, 'a') as fout:
+        with open(config['template config file'], 'r') as ftemp:
+            temp_lines = ftemp.readlines()
+        
+        with open(temp_file, 'w') as fout:
+            fout.write(str(run_dict['run_rate']) + '\n')
+            fout.writelines(temp_lines)
             fout.write(' '.join([str(SLid[i][0]), str(SLid[i][1])]))
             fout.write('\n')
 
@@ -74,9 +78,7 @@ def delete(config, local_folders, SLlist):
 def start(config, SLlist):
     for i in range(0, len(SLlist)):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
-        full_exec_path = os.path.join(full_deploy_path, helper_script)
-        full_cmd = 'bash ' + full_exec_path + ' &'
-        subprocess.run(['bash', 'remoteStart.sh', config['username'], SLlist[i][2], full_cmd])
+        subprocess.run(['bash', 'remoteStart.sh', config['username'], SLlist[i][2], full_deploy_path, helper_script])
 
 def stop(config, SLlist):
     for i in range(0, len(SLlist)):

@@ -59,7 +59,7 @@ def duplicate(config, BGinfo, SLid, run_dict):
         log_filename = run_dict['run_tag'] + 'BG' + str(SLid[i][0]) + '-SL' + str(SLid[i][1]) + '.log'
         with open(temp_file, 'w') as fout:
             fout.write('#!/bin/bash\n')
-            fout.write('./' + config['executable name'] + ' BG' + str(SLid[i][0]) + ' SL' + str(SLid[i][1]) + ' > ' + log_filename + '\n')
+            fout.write('./' + config['executable name'] + ' BG' + str(SLid[i][0]) + ' SL' + str(SLid[i][1]) + ' > ' + log_filename + ' &\n')
         
         subprocess.run(['mv', temp_file, dirname + '/' + helper_script])
     return dirs

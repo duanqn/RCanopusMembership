@@ -82,6 +82,15 @@ def stop(config, SLlist):
     for i in range(0, len(SLlist)):
         subprocess.run(['bash', 'killRemoteProcess.sh', config['username'], SLlist[i][2], helper_script])
 
+def collect(config, SLlist, run_dict):
+    for i in range(0, len(SLlist)):
+        full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
+        full_log_path = os.path.join(full_deploy_path, '*.log')
+        target_folder = run_dict['run_tag']
+        subprocess.run(['rm', '-rf', target_folder])
+        subprocess.run(['mkdir', '-p', target_folder])
+        subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, target_folder])
+
 def main():
     parser = argparse.ArgumentParser(description = '')
     parser.add_argument('-c', '--config-file', type=str, dest='config', required=True)
@@ -143,7 +152,7 @@ def main():
         start(config_parameters, SLlist)
         time.sleep(run['run_time_length'])
         stop(config_parameters, SLlist)
-        #collect()
+        collect()
         delete(config_parameters, dirs, SLlist)
 
 

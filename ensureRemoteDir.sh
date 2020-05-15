@@ -1,0 +1,1 @@
+parallel-ssh -h $1 "sudo mkdir -p $2 && sudo chown $3 $2"

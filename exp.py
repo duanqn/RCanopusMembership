@@ -85,11 +85,11 @@ def stop(config, SLlist):
         subprocess.run(['bash', 'killRemoteProcess.sh', config['username'], SLlist[i][2], 'membership'])
 
 def collect(config, SLlist, run_dict):
+    target_folder = run_dict['run_tag']
+    subprocess.run(['rm', '-rf', target_folder])
     for i in range(0, len(SLlist)):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
         full_log_path = os.path.join(full_deploy_path, '*.log')
-        target_folder = run_dict['run_tag']
-        subprocess.run(['rm', '-rf', target_folder])
         subprocess.run(['mkdir', '-p', target_folder])
         subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, target_folder])
 

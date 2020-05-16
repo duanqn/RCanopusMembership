@@ -1287,6 +1287,7 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
 
         DebugThrow(pos == end); // The size calculation should be correct
 
+        #ifdef DEBUG_PRINT
         printf("BG %d -- membership for cycle %hu:\n[", m_upConfig->BGid, cycleNumber);
 
         std::set<int> finalMembership;
@@ -1298,6 +1299,7 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
         }
 
         printf("]\n");
+        #endif
 
         pTemporaryStorageOfPreprepare = nullptr;
         pRound2_current_status = nullptr;
@@ -1465,7 +1467,12 @@ void ConnManager::round3_committed(uint16_t cycle){
     struct timespec realtime;
     clock_gettime(CLOCK_REALTIME, &realtime);
 
-    printf("%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE * m_upConfig->numBG(), latency_ms.count());
+    int totalSL = 0;
+    for(int i = 0; i < m_upConfig->numBG(); ++i){
+        totalSL += m_upConfig->numSL(i);
+    }
+
+    printf(">%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf | ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE * totalSL, latency_ms.count());
     fflush(stdout); // ensure we get all logs for finished cycles
 
     mapRound3Status.erase(it);

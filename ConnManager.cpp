@@ -967,9 +967,12 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
     pRound2_current_status->state = CycleState::ROUND2_COMMITTED;
 
     MessageRound2Preprepare *pPreprepare = (MessageRound2Preprepare *)pTemporaryStorageOfPreprepare->pMessage;
+
+    #ifdef DEBUG_PRINT
     if(isRound2Leader()){
         printf("BG %d LEADER SEQ %hu Round 2 committed\n", m_upConfig->BGid, pPreprepare->seq);
     }
+    #endif
     
     if(pPreprepare->requestType == REQUEST_TYPE_FROM_CLIENT){
         for(uint16_t cycleNumber = pPreprepare->lastcycle + 1; cycleNumber < pPreprepare->cycle; ++cycleNumber){
@@ -1462,7 +1465,7 @@ void ConnManager::round3_committed(uint16_t cycle){
     struct timespec realtime;
     clock_gettime(CLOCK_REALTIME, &realtime);
 
-    printf("%ld.%09ld sec | Cycle %hu latency on BG %d SL %d: %lf ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, latency_ms.count());
+    printf("%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE * m_upConfig->numBG(), latency_ms.count());
     fflush(stdout); // ensure we get all logs for finished cycles
 
     mapRound3Status.erase(it);

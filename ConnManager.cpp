@@ -1472,7 +1472,7 @@ void ConnManager::round3_committed(uint16_t cycle){
         totalSL += m_upConfig->numSL(i);
     }
 
-    printf(">%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf | ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE * totalSL, latency_ms.count());
+    printf("!%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf | ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE * totalSL, latency_ms.count());
     fflush(stdout); // ensure we get all logs for finished cycles
 
     mapRound3Status.erase(it);

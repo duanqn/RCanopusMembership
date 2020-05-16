@@ -40,9 +40,10 @@ def main():
     args = parser.parse_args()
 
     with open(args.output, 'w') as fout:
-        fout.write('# Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps)\n')
+        fout.write('# Tag | Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps)\n')
 
-    folder = args.log_path
+    folder = os.path.abspath(args.log_path)
+    tag = os.path.basename(folder)
     files = os.listdir(folder)
 
     all_committed_result = []
@@ -87,7 +88,7 @@ def main():
             qualified_committed_result.append(result_tuple)
 
     with open(args.output, 'a') as fout:
-        fout.write(' | '.join([str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result))]))
+        fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result))]))
         fout.write('\n')
 
     print('Avg latency: ' + str(calcAvgLatency(qualified_committed_result)) + ' ms')

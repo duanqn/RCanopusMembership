@@ -243,3 +243,50 @@ MessageRound3FullMembership * MessageRound3FullMembership_BE::partialDeserialize
 
     return (MessageRound3FullMembership *)p;
 }
+
+MessageRound3PreprepareBaseline_BE *MessageRound3PreprepareBaseline::serialize(MessageRound3PreprepareBaseline *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender);
+    toBE(&p->cycle);
+    toBE(&p->collector_BGid);
+
+    return (MessageRound3PreprepareBaseline_BE *)p;
+}
+
+MessageRound3PreprepareBaseline * MessageRound3PreprepareBaseline_BE::partialDeserialize(MessageRound3PreprepareBaseline_BE *p){
+    fromBE(&p->sender);
+    fromBE(&p->cycle);
+    fromBE(&p->collector_BGid);
+
+    return (MessageRound3PreprepareBaseline *)p;
+}
+
+MessageRound3PartialCommitBaseline_BE *MessageRound3PartialCommitBaseline::serialize(MessageRound3PartialCommitBaseline *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender);
+    toBE(&p->cycle);
+
+    return (MessageRound3PartialCommitBaseline_BE *)p;
+}
+
+MessageRound3PartialCommitBaseline * MessageRound3PartialCommitBaseline_BE::partialDeserialize(MessageRound3PartialCommitBaseline_BE *p){
+    fromBE(&p->sender);
+    fromBE(&p->cycle);
+
+    return (MessageRound3PartialCommitBaseline *)p;
+}
+
+MessageRound3FullCommitBaseline_BE *MessageRound3FullCommitBaseline::serialize(MessageRound3FullCommitBaseline *p){
+    MessageHeader::serialize(&p->header);
+    toBE(&p->sender);
+    toBE(&p->cycle);
+
+    return (MessageRound3FullCommitBaseline_BE *)p;
+}
+
+MessageRound3FullCommitBaseline * MessageRound3FullCommitBaseline_BE::partialDeserialize(MessageRound3FullCommitBaseline_BE *p){
+    fromBE(&p->sender);
+    fromBE(&p->cycle);
+
+    return (MessageRound3FullCommitBaseline *)p;
+}

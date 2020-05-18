@@ -7,6 +7,7 @@
 #include "PeerConnection.h"
 #include "const.h"
 #include <map>
+#include <unordered_map>
 #include <sys/socket.h>
 #include <cstring>
 #include <chrono>
@@ -51,6 +52,8 @@ class ConnManager {
     std::map<uint16_t, std::vector<std::pair<uint16_t, uint16_t>>> mapRound3PendingMembershipRequests;
     std::map<uint16_t, std::chrono::time_point<std::chrono::steady_clock>> mapCycleSubmissionTime;
 
+    char *fakeRound3ResponseForBaseline;
+
     int *rgLeader_batch_received_from;
     int leader_batch_received_from_self;
     int leader_send_to_self_pipe[2];
@@ -83,9 +86,13 @@ class ConnManager {
         return !isPassiveConnection(BGid, SLid);
     }
 
-    bool isRound2Leader(){
+    inline bool isRound2Leader(){
         // We never do view change!
         return m_upConfig->SLid == 0;
+    }
+
+    inline bool isGlobalLeader(){
+        return m_upConfig->BGid == 0 && m_upConfig->SLid == 0;
     }
 
     inline void juggle(QueueElement element){
@@ -130,6 +137,10 @@ class ConnManager {
         if(rgLeader_batch_received_from != nullptr){
             delete[] rgLeader_batch_received_from;
         }
+
+        if(fakeRound3ResponseForBaseline != nullptr){
+            delete[] fakeRound3ResponseForBaseline;
+        }
     }
 
     void start();
@@ -152,6 +163,9 @@ class ConnManager {
     virtual void dispatcher_round3_fetchConnectivityResponse(std::unique_ptr<QueueElement> pElement);
     virtual void dispatcher_round3_fetchMembershipRequest(std::unique_ptr<QueueElement> pElement);
     virtual void dispatcher_round3_fetchMembershipResponse(std::unique_ptr<QueueElement> pElement);
-
+    virtual void dispatcher_round3_preprepare(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> pElement);
+    virtual void dispatcher_round3_fullCommit(std::unique_ptr<QueueElement> pElement);
 };
+
 #endif

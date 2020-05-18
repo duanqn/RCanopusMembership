@@ -3,7 +3,7 @@ WAIT=FALSE
 CXXFLAGS += -std=c++17
 LDFLAGS += -lpthread
 
-TARGETS = membership_server
+TARGETS = membership_server membership_server_baseline
 
 ifeq ($(DEBUG),TRUE)
 	CXXFLAGS += -Og -g -DDEBUG_FAILFAST -DDEBUG_PRINT
@@ -20,6 +20,9 @@ endif
 all: clean tests $(TARGETS)
 
 membership_server: server.o config.o PeerConnection.o Peer.o ConnManager.o message.o exception.o const.o
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
+membership_server_baseline: server.o config.o PeerConnection.o Peer.o ConnManager_Baseline.o message.o exception.o const.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
 tests: util_test queue_test

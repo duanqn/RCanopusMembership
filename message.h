@@ -50,6 +50,10 @@ const static uint16_t MESSAGE_ROUND3_FETCH_RESPONSE = MESSAGE_ROUND3_FETCH_REQUE
 const static uint16_t MESSAGE_ROUND3_GENERAL_FETCH = MESSAGE_ROUND3_FETCH_RESPONSE + 1;
 const static uint16_t MESSAGE_ROUND3_CONNECTIVITY_RESPONSE = MESSAGE_ROUND3_GENERAL_FETCH + 1;
 const static uint16_t MESSAGE_ROUND3_MEMBERSHIP_RESPONSE = MESSAGE_ROUND3_CONNECTIVITY_RESPONSE + 1;
+const static uint16_t MESSAGE_ROUND3_PREPREPARE_BASELINE = MESSAGE_ROUND3_MEMBERSHIP_RESPONSE + 1;
+const static uint16_t MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE = MESSAGE_ROUND3_PREPREPARE_BASELINE + 1;
+const static uint16_t MESSAGE_ROUND3_FULL_COMMIT_BASELINE = MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE + 1;
+const static uint16_t MESSAGE_EMPTY = MESSAGE_ROUND3_FULL_COMMIT_BASELINE + 1;
 
 struct MessageHeader;
 struct MessageHeader_BE;
@@ -335,6 +339,81 @@ struct MessageRound3FullMembership_BE{
 };
 
 static_assert(sizeof(MessageRound3FullMembership_BE) == sizeof(MessageRound3FullMembership));
+
+struct MessageRound3PreprepareBaseline;
+struct MessageRound3PreprepareBaseline_BE;
+
+struct MessageRound3PreprepareBaseline{
+    MessageHeader header;
+    uint16_t sender;
+    uint16_t cycle;
+    uint16_t collector_BGid;
+    char content[];
+
+    static MessageRound3PreprepareBaseline_BE *serialize(MessageRound3PreprepareBaseline *p);
+};
+
+struct MessageRound3PreprepareBaseline_BE{
+    MessageHeader header;
+    uint16_t sender;
+    uint16_t cycle;
+    uint16_t collector_BGid;
+    char content[];
+
+    static MessageRound3PreprepareBaseline *partialDeserialize(MessageRound3PreprepareBaseline_BE *p);
+};
+
+static_assert(sizeof(MessageRound3PreprepareBaseline_BE) == sizeof(MessageRound3PreprepareBaseline));
+
+struct MessageRound3PartialCommitBaseline;
+struct MessageRound3PartialCommitBaseline_BE;
+
+struct MessageRound3PartialCommitBaseline{
+    MessageHeader header;
+    uint16_t sender;
+    uint16_t cycle;
+    char signature[SBFT_SIGNATURE_SIZE];
+
+    static MessageRound3PartialCommitBaseline_BE *serialize(MessageRound3PartialCommitBaseline *p);
+};
+
+struct MessageRound3PartialCommitBaseline_BE{
+    MessageHeader header;
+    uint16_t sender;
+    uint16_t cycle;
+    char signature[SBFT_SIGNATURE_SIZE];
+
+    static MessageRound3PartialCommitBaseline *partialDeserialize(MessageRound3PartialCommitBaseline_BE *p);
+};
+
+static_assert(sizeof(MessageRound3PartialCommitBaseline_BE) == sizeof(MessageRound3PartialCommitBaseline));
+
+struct MessageRound3FullCommitBaseline;
+struct MessageRound3FullCommitBaseline_BE;
+
+struct MessageRound3FullCommitBaseline{
+    MessageHeader header;
+    uint16_t sender;
+    uint16_t cycle;
+    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];
+
+    static MessageRound3FullCommitBaseline_BE *serialize(MessageRound3FullCommitBaseline *p);
+};
+
+struct MessageRound3FullCommitBaseline_BE{
+    MessageHeader header;
+    uint16_t sender;
+    uint16_t cycle;
+    char combinedSignature[SBFT_COMBINED_SIGNATURE_SIZE];
+
+    static MessageRound3FullCommitBaseline *partialDeserialize(MessageRound3FullCommitBaseline_BE *p);
+};
+
+static_assert(sizeof(MessageRound3FullCommitBaseline_BE) == sizeof(MessageRound3FullCommitBaseline));
+
+struct MessageEmpty{
+    MessageHeader header;
+};
 
 #pragma pack(pop)
 

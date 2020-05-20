@@ -111,6 +111,7 @@ def genScript(config, SLlist, output_name):
 
             handle = 0
             for otherSL in SLlist:
+                handle += 1
                 tcout.write('sudo tc class add dev ' + config['network interface name'])
                 tcout.write(' parent 1: classid 1:' + str(handle))
                 if sl[0] == otherSL[0]:

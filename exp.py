@@ -133,10 +133,11 @@ def genScript(config, SLlist, SLid, output_name):
 
             if sl[0] == otherSL[0]:
                 # same BG
-                tcout.write(' netem delay ' + config['intra-bg roundtrip latency in ms'] + 'ms\n')
+                latency = int(int(config['intra-bg roundtrip latency in ms']) / 2)
             else:
                 # inter-BG link
-                tcout.write(' netem delay ' + config['inter-bg roundtrip latency in ms'] + 'ms\n')
+                latency = int(int(config['inter-bg roundtrip latency in ms']) / 2)
+            tcout.write(' netem delay ' + str(latency) + 'ms\n')
 
 
 def clearArtificialNetworkLimit(config, machine_list):

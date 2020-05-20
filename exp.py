@@ -64,7 +64,7 @@ def duplicate(config, BGinfo, SLid, run_dict):
         
         subprocess.run(['mv', temp_file, os.path.join(dirname, helper_script)])
 
-        genScript(config, SLid, TC_SCRIPT_NAME)
+        genScript(config, SLid, i, TC_SCRIPT_NAME)
         subprocess.run(['mv', TC_SCRIPT_NAME, os.path.join(dirname, 'set-tc.sh')])
 
     return dirs
@@ -102,41 +102,41 @@ def collect(config, SLlist, run_dict):
         subprocess.run(['mkdir', '-p', target_folder])
         subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, target_folder])
 
-def genScript(config, SLlist, output_name):
-    for sl in SLlist:
-        with open(output_name, 'w') as tcout:
-            tcout.write('#!/bin/bash\n')
+def genScript(config, SLlist, SLid, output_name):
+    sl = SLlist[SLid]
+    with open(output_name, 'w') as tcout:
+        tcout.write('#!/bin/bash\n')
+        tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
+        tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit\n')
+
+        handle = 0
+        for otherSL in SLlist:
+            if sl[0] == otherSL[0] and sl[1] == otherSL[1]:
+                continue
+            handle += 1
+            tcout.write('sudo tc class add dev ' + config['network interface name'])
+            tcout.write(' parent 1: classid 1:' + str(handle))
+            if sl[0] == otherSL[0]:
+                # same BG
+                tcout.write(' cbq rate 10gbit')
+            else:
+                # inter-BG link
+                tcout.write(' cbq rate ' + config['inter-bg bandwidth in mbps'] + 'mbit')
+            tcout.write(' allot 1500 prio 5 unbounded isolated\n')    # I don't really understand these
+            
+            tcout.write('sudo tc filter add dev ' + config['network interface name'])
+            tcout.write(' parent 1: protocol ip prio 16 u32 match dst ip ' + otherSL[2])
+            tcout.write(' flowid 1:' + str(handle) + '\n')
+
             tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-            tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit\n')
+            tcout.write(' parent 1:' + str(handle))
 
-            handle = 0
-            for otherSL in SLlist:
-                if sl[0] == otherSL[0] and sl[1] == otherSL[1]:
-                    continue
-                handle += 1
-                tcout.write('sudo tc class add dev ' + config['network interface name'])
-                tcout.write(' parent 1: classid 1:' + str(handle))
-                if sl[0] == otherSL[0]:
-                    # same BG
-                    tcout.write(' cbq rate 10gbit')
-                else:
-                    # inter-BG link
-                    tcout.write(' cbq rate ' + config['inter-bg bandwidth in mbps'] + 'mbit')
-                tcout.write(' allot 1500 prio 5 unbounded isolated\n')    # I don't really understand these
-                
-                tcout.write('sudo tc filter add dev ' + config['network interface name'])
-                tcout.write(' parent 1: protocol ip prio 16 u32 match dst ip ' + otherSL[2])
-                tcout.write(' flowid 1:' + str(handle) + '\n')
-
-                tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-                tcout.write(' parent 1:' + str(handle))
-
-                if sl[0] == otherSL[0]:
-                    # same BG
-                    tcout.write(' netem delay ' + config['intra-bg roundtrip latency in ms'] + 'ms\n')
-                else:
-                    # inter-BG link
-                    tcout.write(' netem delay ' + config['inter-bg roundtrip latency in ms'] + 'ms\n')
+            if sl[0] == otherSL[0]:
+                # same BG
+                tcout.write(' netem delay ' + config['intra-bg roundtrip latency in ms'] + 'ms\n')
+            else:
+                # inter-BG link
+                tcout.write(' netem delay ' + config['inter-bg roundtrip latency in ms'] + 'ms\n')
 
 
 def clearArtificialNetworkLimit(config, machine_list):

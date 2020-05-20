@@ -5,6 +5,7 @@ import time
 
 helper_script = 'membership-run.sh'
 TC_SCRIPT_NAME = 'tc-script.temp.sh'
+tc_script = 'set-tc.sh'
 
 def parse_temp(config):
     lines = []
@@ -65,7 +66,7 @@ def duplicate(config, BGinfo, SLid, run_dict):
         subprocess.run(['mv', temp_file, os.path.join(dirname, helper_script)])
 
         genScript(config, SLid, i, TC_SCRIPT_NAME)
-        subprocess.run(['mv', TC_SCRIPT_NAME, os.path.join(dirname, 'set-tc.sh')])
+        subprocess.run(['mv', TC_SCRIPT_NAME, os.path.join(dirname, tc_script)])
 
     return dirs
 
@@ -139,6 +140,10 @@ def genScript(config, SLlist, SLid, output_name):
                 latency = int(int(config['inter-bg roundtrip latency in ms']) / 2)
             tcout.write(' netem delay ' + str(latency) + 'ms\n')
 
+def applyArtificialNetworkLimit(config, SLlist):
+    for i in range(0, len(SLlist)):
+        full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
+        subprocess.run(['bash', 'remoteStart.sh', config['username'], SLlist[i][2], full_deploy_path, tc_script])
 
 def clearArtificialNetworkLimit(config, machine_list):
     subprocess.run(['bash', 'clear-tc.sh', machine_list, config['network interface name']])
@@ -213,6 +218,7 @@ def main():
             time.sleep(run['run_time_length'])
             stop(config_parameters, SLlist)
             print("Servers stopped")
+            clearArtificialNetworkLimit(config_parameters, machine_file)
             collect(config_parameters, SLlist, run)
             delete(config_parameters, dirs, SLlist)
             clearLocalDirs(dirs)

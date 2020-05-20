@@ -214,6 +214,7 @@ def main():
             dirs = duplicate(config_parameters, BGinfo, SLlist, run)
             deploy(config_parameters, dirs, SLlist, machine_file)
             print("Start servers...")
+            applyArtificialNetworkLimit(config_parameters, SLlist)
             start(config_parameters, SLlist)
             time.sleep(run['run_time_length'])
             stop(config_parameters, SLlist)

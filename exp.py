@@ -125,7 +125,7 @@ def genScript(config, SLlist, SLid, output_name):
             tcout.write(' allot 1500 prio 5 bounded isolated\n')    # I don't really understand these
             
             tcout.write('sudo tc filter add dev ' + config['network interface name'])
-            tcout.write(' parent 1: protocol ip prio 16 u32 match dst ip ' + otherSL[2])
+            tcout.write(' parent 1: protocol ip prio 16 u32 match ip dst ' + otherSL[2])
             tcout.write(' flowid 1:' + str(handle) + '\n')
 
             tcout.write('sudo tc qdisc add dev ' + config['network interface name'])

@@ -1283,13 +1283,8 @@ void ConnManager::round3_committed(uint16_t cycle){
 
     struct timespec realtime;
     clock_gettime(CLOCK_REALTIME, &realtime);
-
-    int totalSL = 0;
-    for(int i = 0; i < m_upConfig->numBG(); ++i){
-        totalSL += m_upConfig->numSL(i);
-    }
-
-    printf("!%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf | ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE * totalSL, latency_ms.count());
+    
+    printf("!%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf | ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE, latency_ms.count());
     fflush(stdout); // ensure we get all logs for finished cycles
 
     mapRound3Status.erase(it);

@@ -122,7 +122,7 @@ def genScript(config, SLlist, SLid, output_name):
             else:
                 # inter-BG link
                 tcout.write(' cbq rate ' + config['inter-bg bandwidth in mbps'] + 'mbit')
-            tcout.write(' allot 1500 prio 5 unbounded isolated\n')    # I don't really understand these
+            tcout.write(' allot 1500 prio 5 bounded isolated\n')    # I don't really understand these
             
             tcout.write('sudo tc filter add dev ' + config['network interface name'])
             tcout.write(' parent 1: protocol ip prio 16 u32 match dst ip ' + otherSL[2])

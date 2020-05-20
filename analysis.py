@@ -19,13 +19,12 @@ def calcPercentileLatency(unsorted_tuple_list, percentile):
     pos = int(len(unsorted_tuple_list) * percentile)
     return unsorted_tuple_list[pos][2]
 
-def calcThroughput(unsorted_tuple_list):
+def calcThroughput(unsorted_tuple_list, time_interval):
     sum_txn = 0
     for data_tuple in unsorted_tuple_list:
         sum_txn += data_tuple[1]
 
     unsorted_tuple_list.sort(key=sortTime, reverse=False)
-    time_interval = unsorted_tuple_list[-1][0] - unsorted_tuple_list[0][0]
 
     print(str(sum_txn) + " transactions committed in " + str(time_interval) + ' seconds')
     return sum_txn / time_interval
@@ -88,7 +87,7 @@ def main():
             qualified_committed_result.append(result_tuple)
 
     with open(args.output, 'a') as fout:
-        fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result))]))
+        fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front))]))
         fout.write('\n')
 
     print('Avg latency: ' + str(calcAvgLatency(qualified_committed_result)) + ' ms')
@@ -97,7 +96,7 @@ def main():
     print('50-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.5)) + ' ms')
     print('75-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.75)) + ' ms')
     print('95-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.95)) + ' ms')
-    print('Average throughput: ' + str(calcThroughput(qualified_committed_result)) + ' tps')
+    print('Average throughput: ' + str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)) + ' tps')
 
 if __name__ == "__main__":
     main()

@@ -59,6 +59,10 @@ char * ConnManager::recvMessage_caller_free_mem(int sock){
 
         case MESSAGE_ROUND3_PREPREPARE_BASELINE:
         MessageRound3PreprepareBaseline_BE::partialDeserialize((MessageRound3PreprepareBaseline_BE *)buffer);
+        #ifdef DEBUG_PRINT
+        printf("Round 3 Preprepare after receiving:\n");
+        dumpMsg((MessageHeader *)buffer);
+        #endif
         break;
 
         case MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE:
@@ -485,6 +489,10 @@ void ConnManager::sender(){
             break;
 
             case MESSAGE_ROUND3_PREPREPARE_BASELINE:
+            #ifdef DEBUG_PRINT
+            printf("Round 3 Preprepare before sending:\n");
+            dumpMsg(element.pMessage);
+            #endif
             MessageRound3PreprepareBaseline::serialize((MessageRound3PreprepareBaseline *)element.pMessage);
             break;
 

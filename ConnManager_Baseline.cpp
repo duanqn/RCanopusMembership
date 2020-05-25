@@ -1813,6 +1813,9 @@ void ConnManager::dispatcher_round3_preprepare(std::unique_ptr<QueueElement> pEl
     auto it = mapRound3Status.find(cycle);
     if(it == mapRound3Status.end()){
         printf("dispatcher_round3_preprepare: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycle);
+        
+        printf("Message received in dispatcher_round3_preprepare:\n");
+        dumpMsg((MessageHeader *)pElement->pMessage);
         throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
     }
 

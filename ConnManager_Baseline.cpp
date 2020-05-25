@@ -1900,6 +1900,7 @@ void ConnManager::dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> 
         MessageRound3FullCommitBaseline *pFullC = (MessageRound3FullCommitBaseline *)buffer;
         pFullC->header.version = VERSION_LATEST;
         pFullC->header.msgType = MESSAGE_ROUND3_FULL_COMMIT_BASELINE;
+        pFullC->header.payloadLen = sizeof(MessageRound3FullCommitBaseline) - sizeof(MessageHeader);
         
         pFullC->sender = m_upConfig->BGid;
         pFullC->cycle = cycle;

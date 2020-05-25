@@ -1,5 +1,8 @@
 #include "message.h"
 #include <cstring>
+#ifdef DEBUG_PRINT
+#include <cstdio>
+#endif
 
 MessageHeader_BE *MessageHeader::serialize(MessageHeader *p){
     toBE(&p->version);
@@ -245,18 +248,34 @@ MessageRound3FullMembership * MessageRound3FullMembership_BE::partialDeserialize
 }
 
 MessageRound3PreprepareBaseline_BE *MessageRound3PreprepareBaseline::serialize(MessageRound3PreprepareBaseline *p){
+    #ifdef DEBUG_PRINT
+    printf("Field \"cycle\": %hu ->", p->cycle);
+    #endif
+    
     MessageHeader::serialize(&p->header);
     toBE(&p->sender);
     toBE(&p->cycle);
     toBE(&p->collector_BGid);
 
+    #ifdef DEBUG_PRINT
+    printf("%hu\n", p->cycle);
+    #endif
+
     return (MessageRound3PreprepareBaseline_BE *)p;
 }
 
 MessageRound3PreprepareBaseline * MessageRound3PreprepareBaseline_BE::partialDeserialize(MessageRound3PreprepareBaseline_BE *p){
+    #ifdef DEBUG_PRINT
+    printf("Field \"cycle\": %hu ->", p->cycle);
+    #endif
+    
     fromBE(&p->sender);
     fromBE(&p->cycle);
     fromBE(&p->collector_BGid);
+
+    #ifdef DEBUG_PRINT
+    printf("%hu\n", p->cycle);
+    #endif
 
     return (MessageRound3PreprepareBaseline *)p;
 }

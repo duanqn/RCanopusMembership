@@ -1088,6 +1088,10 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
             pPreprepare3->sender = m_upConfig->BGid;    // always 0
             pPreprepare3->cycle = cycleNumber;
 
+            #ifdef DEBUG_PRINT
+            printf("BG %d SL %d pushing global SBFT preprepare msg for cycle %hu into the queue\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare3->cycle);
+            #endif
+
             std::uniform_int_distribution<int> dist(0, m_upConfig->numBG() - 1);
             pPreprepare3->collector_BGid = (uint16_t) dist(m_engine);
 
@@ -1390,6 +1394,10 @@ void ConnManager::dispatcher_round3_fetchResponse(std::unique_ptr<QueueElement> 
             pNextPreprepare->lastcycle = pResponse->cycle - 1;
             pNextPreprepare->collector_SLid = 0;    // will be filled later
             pNextPreprepare->numOfRound3Participants = 0;
+
+            #ifdef DEBUG_PRINT
+            printf("BG %d SL %d pushing local connectivity preprepare msg for cycle %hu into the queue\n", m_upConfig->BGid, m_upConfig->SLid, pNextPreprepare->cycle);
+            #endif
 
             pLeaderRound2PendingPreprepareRaw->push(pNextPreprepare);
         }

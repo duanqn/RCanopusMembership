@@ -86,6 +86,11 @@ def start(config, SLlist):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
         subprocess.run(['bash', 'remoteStart.sh', config['username'], SLlist[i][2], full_deploy_path, helper_script])
 
+def startLocal(config, SLlist):
+    for i in range(0, len(SLlist)):
+        full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
+        subprocess.run(['bash', 'localStart.sh', full_deploy_path, helper_script])
+
 def stop(config, SLlist):
     for i in range(0, len(SLlist)):
         subprocess.run(['bash', 'killRemoteProcess.sh', config['username'], SLlist[i][2], 'membership'])
@@ -214,7 +219,7 @@ def main():
             dirs = duplicate(config_parameters, BGinfo, SLlist, run)
             deploy(config_parameters, dirs, SLlist, machine_file)
             print("Start servers...")
-            start(config_parameters, SLlist)
+            startLocal(config_parameters, SLlist)
             time.sleep(run['run_time_length'])
             stop(config_parameters, SLlist)
             print("Servers stopped")

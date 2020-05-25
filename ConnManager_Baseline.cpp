@@ -59,10 +59,6 @@ char * ConnManager::recvMessage_caller_free_mem(int sock){
 
         case MESSAGE_ROUND3_PREPREPARE_BASELINE:
         MessageRound3PreprepareBaseline_BE::partialDeserialize((MessageRound3PreprepareBaseline_BE *)buffer);
-        #ifdef DEBUG_PRINT
-        printf("Round 3 Preprepare after receiving:\n");
-        dumpMsg((MessageHeader *)buffer);
-        #endif
         break;
 
         case MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE:
@@ -489,10 +485,6 @@ void ConnManager::sender(){
             break;
 
             case MESSAGE_ROUND3_PREPREPARE_BASELINE:
-            #ifdef DEBUG_PRINT
-            printf("Round 3 Preprepare before sending:\n");
-            dumpMsg(element.pMessage);
-            #endif
             MessageRound3PreprepareBaseline::serialize((MessageRound3PreprepareBaseline *)element.pMessage);
             break;
 
@@ -1096,10 +1088,6 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
             pPreprepare3->sender = m_upConfig->BGid;    // always 0
             pPreprepare3->cycle = cycleNumber;
 
-            #ifdef DEBUG_PRINT
-            printf("BG %d SL %d pushing global SBFT preprepare msg for cycle %hu into the queue\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare3->cycle);
-            #endif
-
             std::uniform_int_distribution<int> dist(0, m_upConfig->numBG() - 1);
             pPreprepare3->collector_BGid = (uint16_t) dist(m_engine);
 
@@ -1402,10 +1390,6 @@ void ConnManager::dispatcher_round3_fetchResponse(std::unique_ptr<QueueElement> 
             pNextPreprepare->lastcycle = pResponse->cycle - 1;
             pNextPreprepare->collector_SLid = 0;    // will be filled later
             pNextPreprepare->numOfRound3Participants = 0;
-
-            #ifdef DEBUG_PRINT
-            printf("BG %d SL %d pushing local connectivity preprepare msg for cycle %hu into the queue\n", m_upConfig->BGid, m_upConfig->SLid, pNextPreprepare->cycle);
-            #endif
 
             pLeaderRound2PendingPreprepareRaw->push(pNextPreprepare);
         }
@@ -1803,19 +1787,12 @@ void ConnManager::round3_respondToPendingFetchMembershipRequests(uint16_t cycle)
 }
 
 void ConnManager::dispatcher_round3_preprepare(std::unique_ptr<QueueElement> pElement){
-    #ifdef DEBUG_PRINT
-    printf("Message received in dispatcher_round3_preprepare:\n");
-    dumpMsg((MessageHeader *)pElement->pMessage);
-    #endif
     MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)pElement->pMessage;
     uint16_t cycle = pPreprepare3->cycle;
 
     auto it = mapRound3Status.find(cycle);
     if(it == mapRound3Status.end()){
         printf("dispatcher_round3_preprepare: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycle);
-
-        printf("Message received in dispatcher_round3_preprepare:\n");
-        dumpMsg((MessageHeader *)pElement->pMessage);
         throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
     }
 

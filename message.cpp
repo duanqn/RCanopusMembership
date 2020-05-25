@@ -1,8 +1,6 @@
 #include "message.h"
 #include <cstring>
-#ifdef DEBUG_PRINT
 #include <cstdio>
-#endif
 
 MessageHeader_BE *MessageHeader::serialize(MessageHeader *p){
     toBE(&p->version);
@@ -93,6 +91,15 @@ MessageRound3FetchRequest* getRound3Request_caller_free_mem(MessageRound3FetchRe
     memcpy(pRequest->combinedSignature, pResponse->combinedSignature, SBFT_COMBINED_SIGNATURE_SIZE);
 
     return pRequest;
+}
+
+void dumpMsg(MessageHeader *pHeader){
+    size_t size = getMessageSize(pHeader);
+    char *ptr = (char *)pHeader;
+    for(int i = 0; i < size; ++i){
+        printf("%0hhX ", ptr[i]);
+    }
+    printf("\n");
 }
 
 MessageRound2Preprepare_BE *MessageRound2Preprepare::serialize(MessageRound2Preprepare *p){

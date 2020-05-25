@@ -420,5 +420,6 @@ struct MessageEmpty{
 size_t getMessageSize(MessageHeader *pHeader);
 MessageRound3FetchResponse* getRound3Response_caller_free_mem(MessageRound2Preprepare *pPreprepare, MessageRound2FullCommit *pFullC, uint16_t SLid, uint16_t cycle);
 MessageRound3FetchRequest* getRound3Request_caller_free_mem(MessageRound3FetchResponse *pResponse);
+void dumpMsg(MessageHeader *pHeader);
 
 #endif

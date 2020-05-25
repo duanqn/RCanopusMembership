@@ -205,10 +205,9 @@ def main():
             machine_config.write(machine + '\n')
 
     if(args.killonly):
-        for run in runs:
-            dirs = duplicate(config_parameters, BGinfo, SLlist, run)
-            stop(config_parameters, SLlist)
-            delete(config_parameters, dirs, SLlist)
+        dirs = duplicate(config_parameters, BGinfo, SLlist, runs[0])
+        stop(config_parameters, SLlist)
+        delete(config_parameters, dirs, SLlist)
     else:
         for run in runs:
             dirs = duplicate(config_parameters, BGinfo, SLlist, run)

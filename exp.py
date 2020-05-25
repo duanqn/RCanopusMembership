@@ -152,6 +152,7 @@ def main():
     parser = argparse.ArgumentParser(description = '')
     parser.add_argument('-c', '--config-file', type=str, dest='config', required=True)
     parser.add_argument('--kill-only', action='store_true', dest='killonly', required=False)
+    parser.add_argument('--local', action='store_true', dest='run_local', required=False)
 
     args = parser.parse_args()
 
@@ -204,10 +205,22 @@ def main():
         for machine in machines:
             machine_config.write(machine + '\n')
 
-    if(args.killonly):
+    if args.killonly:
         dirs = duplicate(config_parameters, BGinfo, SLlist, runs[0])
         stop(config_parameters, SLlist)
         delete(config_parameters, dirs, SLlist)
+    elif args.run_local:
+        for run in runs:
+            dirs = duplicate(config_parameters, BGinfo, SLlist, run)
+            deploy(config_parameters, dirs, SLlist, machine_file)
+            print("Start servers...")
+            start(config_parameters, SLlist)
+            time.sleep(run['run_time_length'])
+            stop(config_parameters, SLlist)
+            print("Servers stopped")
+            collect(config_parameters, SLlist, run)
+            delete(config_parameters, dirs, SLlist)
+            clearLocalDirs(dirs)
     else:
         for run in runs:
             dirs = duplicate(config_parameters, BGinfo, SLlist, run)

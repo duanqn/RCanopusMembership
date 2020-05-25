@@ -169,12 +169,12 @@ def main():
 
     run_description = False
     for line in lines:
-        if not line:
-            continue
         if line.startswith('#'):
             continue
         
         line = line.strip().strip('\n')
+        if not line:
+            continue
         if line == 'BEGIN_RUN_DESCRIPTION':
             run_description = True
             continue

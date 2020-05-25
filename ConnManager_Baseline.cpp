@@ -1803,6 +1803,10 @@ void ConnManager::round3_respondToPendingFetchMembershipRequests(uint16_t cycle)
 }
 
 void ConnManager::dispatcher_round3_preprepare(std::unique_ptr<QueueElement> pElement){
+    #ifdef DEBUG_PRINT
+    printf("Message received in dispatcher_round3_preprepare:\n");
+    dumpMsg((MessageHeader *)pElement->pMessage);
+    #endif
     MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)pElement->pMessage;
     uint16_t cycle = pPreprepare3->cycle;
 

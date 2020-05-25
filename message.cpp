@@ -97,7 +97,7 @@ void dumpMsg(MessageHeader *pHeader){
     size_t size = getMessageSize(pHeader);
     char *ptr = (char *)pHeader;
     for(int i = 0; i < size; ++i){
-        printf("%0hhX ", ptr[i]);
+        printf("%02hhX ", ptr[i]);
     }
     printf("\n");
 }

@@ -42,7 +42,7 @@ int main(){
 
     #ifdef DEBUG_WAIT
     pid_t pid = getpid();
-    printf("BG %d SL %d \t PID %d\n", config.BGid, config.SLid, pid);
+    fprintf(stderr, "BG %d SL %d \t PID %d\n", config.BGid, config.SLid, pid);
     std::this_thread::sleep_for(std::chrono::seconds(10));
     #endif
 

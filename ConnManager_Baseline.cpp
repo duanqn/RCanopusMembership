@@ -1869,8 +1869,8 @@ void ConnManager::dispatcher_round3_preprepare(std::unique_ptr<QueueElement> pEl
 }
 
 void ConnManager::dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> pElement){
-    MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)pElement->pMessage;
-    uint16_t cycle = pPreprepare3->cycle;
+    MessageRound3PartialCommitBaseline *pPartialC3 = (MessageRound3PartialCommitBaseline *)pElement->pMessage;
+    uint16_t cycle = pPartialC3->cycle;
 
     DebugThrowElseReturnVoid(isRound2Leader());
 
@@ -1920,8 +1920,8 @@ void ConnManager::dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> 
 }
 
 void ConnManager::dispatcher_round3_fullCommit(std::unique_ptr<QueueElement> pElement){
-    MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)pElement->pMessage;
-    uint16_t cycle = pPreprepare3->cycle;
+    MessageRound3FullCommitBaseline *pFullC3 = (MessageRound3FullCommitBaseline *)pElement->pMessage;
+    uint16_t cycle = pFullC3->cycle;
 
     auto it = mapRound3Status.find(cycle);
     if(it == mapRound3Status.end()){

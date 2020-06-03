@@ -217,6 +217,7 @@ def main():
     elif args.run_local:
         for run in runs:
             dirs = duplicate(config_parameters, BGinfo, SLlist, run)
+            delete(config_parameters, dirs, SLlist)
             deploy(config_parameters, dirs, SLlist, machine_file)
             print("Start servers...")
             startLocal(config_parameters, SLlist)
@@ -224,11 +225,12 @@ def main():
             stop(config_parameters, SLlist)
             print("Servers stopped")
             collect(config_parameters, SLlist, run)
-            delete(config_parameters, dirs, SLlist)
+            
             clearLocalDirs(dirs)
     else:
         for run in runs:
             dirs = duplicate(config_parameters, BGinfo, SLlist, run)
+            delete(config_parameters, dirs, SLlist)
             deploy(config_parameters, dirs, SLlist, machine_file)
             print("Start servers...")
             applyArtificialNetworkLimit(config_parameters, SLlist)
@@ -238,7 +240,7 @@ def main():
             print("Servers stopped")
             clearArtificialNetworkLimit(config_parameters, machine_file)
             collect(config_parameters, SLlist, run)
-            delete(config_parameters, dirs, SLlist)
+            
             clearLocalDirs(dirs)
 
 

@@ -39,7 +39,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.output, 'w') as fout:
-        fout.write('# Tag | Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps)\n')
+        fout.write('# Tag | Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps) | Effective length (ms)\n')
 
     parent_folder = os.path.abspath(args.log_parent)
     folder_list = os.listdir(parent_folder)
@@ -102,7 +102,7 @@ def main():
         if not ERRFLAG:
             with open(args.output, 'a') as fout:
                 try:
-                    fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front))]))
+                    fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)), str(timestamp_threshold_end - timestamp_threshold_front)]))
                     fout.write('\n')
                 except Exception as e:
                     ERRFLAG = True
@@ -116,6 +116,7 @@ def main():
                 print('75-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.75)) + ' ms')
                 print('95-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.95)) + ' ms')
                 print('Average throughput: ' + str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)) + ' tps')
+                print('Effective experiment length: ' + str(timestamp_threshold_end - timestamp_threshold_front) + ' ms')
             except Exception as e:
                 ERRFLAG = True
 

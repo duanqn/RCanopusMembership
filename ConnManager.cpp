@@ -1832,6 +1832,8 @@ void ConnManager::dispatcher_round3_fetchMembershipResponse(std::unique_ptr<Queu
 
     if(it->second->state != CycleState::ROUND3_WAITING_FOR_REPLICATED_MEMBERSHIP){
         printf("BG %d SL %d cycle %hu got membership response but is still in state %d!\n", m_upConfig->BGid, m_upConfig->SLid, cycle, int(it->second->state));
+        juggle(std::move(*pElement));
+        return;
     }
     DebugThrowElseReturnVoid(it->second->rgMsgRound3MembershipResponse[pMembership->sender_BGid] == nullptr);
     DebugThrow(it->second->awaiting_message_type == MESSAGE_ROUND3_MEMBERSHIP_RESPONSE);

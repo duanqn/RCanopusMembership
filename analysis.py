@@ -84,35 +84,46 @@ def main():
         all_committed_result.sort(key=sortTime, reverse=False)
         # print(all_committed_result)
 
-        qualified_committed_result = []
-        earliest_time = all_committed_result[0][0]
-        timestamp_threshold_front = earliest_time + args.cut_front
-        latest_time = all_committed_result[-1][0]
-        timestamp_threshold_end = latest_time - args.cut_end
+        ERRFLAG = False
+        try:
+            qualified_committed_result = []
+            earliest_time = all_committed_result[0][0]
+            timestamp_threshold_front = earliest_time + args.cut_front
+            latest_time = all_committed_result[-1][0]
+            timestamp_threshold_end = latest_time - args.cut_end
 
-        for result_tuple in all_committed_result:
-            tuple_time = sortTime(result_tuple)
-            if tuple_time >= timestamp_threshold_front and tuple_time <= timestamp_threshold_end:
-                qualified_committed_result.append(result_tuple)
+            for result_tuple in all_committed_result:
+                tuple_time = sortTime(result_tuple)
+                if tuple_time >= timestamp_threshold_front and tuple_time <= timestamp_threshold_end:
+                    qualified_committed_result.append(result_tuple)
+        except Exception as e:
+            ERRFLAG = True
 
-        with open(args.output, 'a') as fout:
+        if not ERRFLAG:
+            with open(args.output, 'a') as fout:
+                try:
+                    fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front))]))
+                    fout.write('\n')
+                except Exception as e:
+                    ERRFLAG = True
+        
+        if not ERRFLAG:
             try:
-                fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front))]))
-                fout.write('\n')
+                print('Avg latency: ' + str(calcAvgLatency(qualified_committed_result)) + ' ms')
+                print('5-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.05)) + ' ms')
+                print('25-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.25)) + ' ms')
+                print('50-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.5)) + ' ms')
+                print('75-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.75)) + ' ms')
+                print('95-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.95)) + ' ms')
+                print('Average throughput: ' + str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)) + ' tps')
             except Exception as e:
+                ERRFLAG = True
+
+        if ERRFLAG:
+            with open(args.output, 'a') as fout:
                 fout.write(' | '.join([tag, "ERROR"]))
                 fout.write('\n')
-
-        try:
-            print('Avg latency: ' + str(calcAvgLatency(qualified_committed_result)) + ' ms')
-            print('5-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.05)) + ' ms')
-            print('25-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.25)) + ' ms')
-            print('50-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.5)) + ' ms')
-            print('75-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.75)) + ' ms')
-            print('95-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.95)) + ' ms')
-            print('Average throughput: ' + str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)) + ' tps')
-        except Exception as e:
-            print('Error occurred during calculation.')
+                print('Error occurred during calculation.')
 
 if __name__ == "__main__":
     main()

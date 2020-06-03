@@ -31,7 +31,7 @@ def calcThroughput(unsorted_tuple_list, time_interval):
 
 def main():
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('-p', '--log-path', type=str, dest='log_path', required=True, help='Path to the log folder')
+    parser.add_argument('-p', '--log-parent-path', type=str, dest='log_parent', required=True, help='Path to the parent folder of the log folder')
     parser.add_argument('-f', '--cut-front', type=int, dest='cut_front', required=False, default=15, help='Seconds to cut off at the beginning of the experiment')
     parser.add_argument('-e', '--cut-end', type=int, dest='cut_end', required=False, default=10, help='Seconds to cut off at the end of the experiment')
     parser.add_argument('-o', '--output', type=str, dest='output', required=True, help='File to store the analyze result')
@@ -41,62 +41,74 @@ def main():
     with open(args.output, 'w') as fout:
         fout.write('# Tag | Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps)\n')
 
-    folder = os.path.abspath(args.log_path)
-    tag = os.path.basename(folder)
-    files = os.listdir(folder)
-
-    all_committed_result = []
-    for filename in files:
-        filepath = os.path.join(folder, filename)
-        if not filename.endswith('.log'):
+    parent_folder = os.path.abspath(args.log_parent)
+    folder_list = os.listdir(parent_folder)
+    for folder_name in folder_list:
+        folder = os.path.join(parent_folder, folder_name)
+        if not os.path.isdir(folder):
             continue
+        tag = os.path.basename(folder)
+        files = os.listdir(folder)
 
-        with open(filepath, 'r') as fin:
-            lines = fin.readlines()
-
-        for line in lines:
-            line = line.strip().strip('\n')
-            if not line:
+        all_committed_result = []
+        for filename in files:
+            filepath = os.path.join(folder, filename)
+            if not filename.endswith('.log'):
                 continue
-            if not line.startswith('!'):
-                continue
-            line = line[1:] # get rid of '!'
-            
-            segs = line.split('|')
 
-            for i in range(0, len(segs)):
-                segs[i] = segs[i].strip()
+            with open(filepath, 'r') as fin:
+                lines = fin.readlines()
 
-            commit_time = float(segs[0])
-            transactions = int(segs[2])
-            latency = float(segs[3])
-            all_committed_result.append((commit_time, transactions, latency))
+            for line in lines:
+                line = line.strip().strip('\n')
+                if not line:
+                    continue
+                if not line.startswith('!'):
+                    continue
+                line = line[1:] # get rid of '!'
+                
+                segs = line.split('|')
 
-    all_committed_result.sort(key=sortTime, reverse=False)
-    # print(all_committed_result)
+                for i in range(0, len(segs)):
+                    segs[i] = segs[i].strip()
 
-    qualified_committed_result = []
-    earliest_time = all_committed_result[0][0]
-    timestamp_threshold_front = earliest_time + args.cut_front
-    latest_time = all_committed_result[-1][0]
-    timestamp_threshold_end = latest_time - args.cut_end
+                commit_time = float(segs[0])
+                transactions = int(segs[2])
+                latency = float(segs[3])
+                all_committed_result.append((commit_time, transactions, latency))
 
-    for result_tuple in all_committed_result:
-        tuple_time = sortTime(result_tuple)
-        if tuple_time >= timestamp_threshold_front and tuple_time <= timestamp_threshold_end:
-            qualified_committed_result.append(result_tuple)
+        all_committed_result.sort(key=sortTime, reverse=False)
+        # print(all_committed_result)
 
-    with open(args.output, 'a') as fout:
-        fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front))]))
-        fout.write('\n')
+        qualified_committed_result = []
+        earliest_time = all_committed_result[0][0]
+        timestamp_threshold_front = earliest_time + args.cut_front
+        latest_time = all_committed_result[-1][0]
+        timestamp_threshold_end = latest_time - args.cut_end
 
-    print('Avg latency: ' + str(calcAvgLatency(qualified_committed_result)) + ' ms')
-    print('5-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.05)) + ' ms')
-    print('25-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.25)) + ' ms')
-    print('50-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.5)) + ' ms')
-    print('75-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.75)) + ' ms')
-    print('95-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.95)) + ' ms')
-    print('Average throughput: ' + str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)) + ' tps')
+        for result_tuple in all_committed_result:
+            tuple_time = sortTime(result_tuple)
+            if tuple_time >= timestamp_threshold_front and tuple_time <= timestamp_threshold_end:
+                qualified_committed_result.append(result_tuple)
+
+        with open(args.output, 'a') as fout:
+            try:
+                fout.write(' | '.join([tag, str(calcAvgLatency(qualified_committed_result)), str(calcPercentileLatency(qualified_committed_result, 0.05)), str(calcPercentileLatency(qualified_committed_result, 0.25)), str(calcPercentileLatency(qualified_committed_result, 0.5)), str(calcPercentileLatency(qualified_committed_result, 0.75)), str(calcPercentileLatency(qualified_committed_result, 0.95)), str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front))]))
+                fout.write('\n')
+            except Exception as e:
+                fout.write(' | '.join([tag, "ERROR"]))
+                fout.write('\n')
+
+        try:
+            print('Avg latency: ' + str(calcAvgLatency(qualified_committed_result)) + ' ms')
+            print('5-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.05)) + ' ms')
+            print('25-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.25)) + ' ms')
+            print('50-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.5)) + ' ms')
+            print('75-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.75)) + ' ms')
+            print('95-th percentile latency: ' + str(calcPercentileLatency(qualified_committed_result, 0.95)) + ' ms')
+            print('Average throughput: ' + str(calcThroughput(qualified_committed_result, time_interval=timestamp_threshold_end - timestamp_threshold_front)) + ' tps')
+        except Exception as e:
+            print('Error occurred during calculation.')
 
 if __name__ == "__main__":
     main()

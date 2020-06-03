@@ -43,6 +43,7 @@ def main():
 
     parent_folder = os.path.abspath(args.log_parent)
     folder_list = os.listdir(parent_folder)
+    folder_list.sort()
     for folder_name in folder_list:
         folder = os.path.join(parent_folder, folder_name)
         if not os.path.isdir(folder):

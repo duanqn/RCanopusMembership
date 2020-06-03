@@ -567,7 +567,11 @@ void ConnManager::start(){
 
     while(true){
         std::unique_ptr<QueueElement> pElement = std::make_unique<QueueElement>();
-        recvQueue.wait_dequeue(*pElement);
+        std::chrono::seconds sec1 = std::chrono::seconds(1);
+        if(!recvQueue.wait_dequeue_timed(*pElement, sec1)){
+            fflush(stdout);
+            continue;
+        }
 
         dispatcher_round2(std::move(pElement));
         size_t current_size = juggleQueue.size();

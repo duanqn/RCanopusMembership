@@ -839,7 +839,7 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     if(pPreprepare->collector_SLid == m_upConfig->SLid){
         // I'm selected as the collector for this cycle
         #ifdef DEBUG_PRINT
-        printf("BG %d SL %d is the collector for cycle %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->cycle);
+        printf("BG %d SL %d is the collector for seq %hu cycle %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->seq, pPreprepare->cycle);
         #endif
         round2_isCollector = true;
         pRound2_current_status->state = CycleState::ROUND2_COLLECTOR_WAITING_FOR_PARTIALCOMMITS;

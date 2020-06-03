@@ -25,6 +25,9 @@ char * ConnManager::recvMessage_caller_free_mem(int sock){
     MessageHeader *pHeader = MessageHeader_BE::deserialize(pbeHeader);
 
     size_t extraLen = pHeader->payloadLen;
+    #ifdef DEBUG_PRINT
+    printf("ConnManager::recvMessage_caller_free_mem Payload size %lu\n", extraLen);
+    #endif
     char* buffer = new char[sizeof(MessageHeader) + extraLen];
     #ifdef MEM_DBG
     heapalloc.fetch_add(sizeof(MessageHeader) + extraLen);
@@ -368,6 +371,9 @@ void ConnManager::listener(){
                     }
                     else{
                         // recv packet
+                        #ifdef DEBUG_PRINT
+                        printf("Receiving message from poll slot %d\n", i);
+                        #endif
                         char *pMessage = recvMessage_caller_free_mem(rgPoll[i].fd);
                         QueueElement element;
                         element.pMessage = (MessageHeader *)pMessage;

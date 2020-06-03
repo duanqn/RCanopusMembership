@@ -21,9 +21,6 @@ void PeerConnection::recv(int socketfd, size_t bytes_to_receive, char * dest){
     size_t received = 0;
     ssize_t ret = 0;
     while(received < bytes_to_receive){
-        #ifdef DEBUG_PRINT
-        printf("PeerConnection::recv %lu bytes received, %lu left\n", received, bytes_to_receive);
-        #endif
         ret = ::recv(socketfd, dest + received, bytes_to_receive - received, 0);
         if(ret < 0){
             // Check for EAGAIN and EWOULDBLOCK ?

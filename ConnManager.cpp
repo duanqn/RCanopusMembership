@@ -13,6 +13,12 @@ bool cmpRequestType(MessageRound2Preprepare *px, MessageRound2Preprepare *py){
 }
 
 char * ConnManager::recvMessage_caller_free_mem(int sock){
+    #ifdef DEBUG_PRINT
+    printf("Entering ConnManager::recvMessage_caller_free_mem\n");
+    AlgoLib::Util::TCleanup t([]{
+        printf("Leaving ConnManager::recvMessage_caller_free_mem\n");
+    });
+    #endif
     char headerBuf[sizeof(MessageHeader)];
     PeerConnection::recv(sock, sizeof(MessageHeader), headerBuf);
     MessageHeader_BE *pbeHeader = (MessageHeader_BE *)headerBuf;
@@ -997,7 +1003,7 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
         printf("BG %d SL %d SEQ %hu Round 2 committed\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->seq);
     }
 
-    AlgoLib::Util::TCleanup([]{
+    AlgoLib::Util::TCleanup t([]{
         fflush(stdout);
     });
     #endif

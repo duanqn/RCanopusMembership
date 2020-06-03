@@ -1005,7 +1005,7 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
         printf("BG %d SL %d SEQ %hu Round 2 committed\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->seq);
     }
 
-    AlgoLib::Util::TCleanup([]{
+    AlgoLib::Util::TCleanup t([]{
         fflush(stdout);
     });
     #endif

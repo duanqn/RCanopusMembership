@@ -466,6 +466,10 @@ void ConnManager::sender(){
             }
         }
 
+        #ifdef DEBUG_PRINT
+        uint16_t messageType = element.pMessage->msgType;
+        #endif
+
         // Convert byte order
         switch(element.pMessage->msgType){
             case MESSAGE_HELLO:
@@ -523,7 +527,7 @@ void ConnManager::sender(){
 
             pPeer->send((char *)element.pMessage, totalLength);
             #ifdef DEBUG_PRINT
-            printf("BG %d SL %d sent message to BG %d SL %d, type %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPeer->m_upRemotePeer->m_BGid, pPeer->m_upRemotePeer->m_SLid, element.pMessage->msgType);
+            printf("BG %d SL %d sent message to BG %d SL %d, type %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPeer->m_upRemotePeer->m_BGid, pPeer->m_upRemotePeer->m_SLid, messageType);
             #endif
         }
     }

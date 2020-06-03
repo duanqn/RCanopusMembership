@@ -45,10 +45,12 @@ def main():
     folder_list = os.listdir(parent_folder)
     folder_list.sort()
     for folder_name in folder_list:
-        print('Processing folder ' + folder_name)
         folder = os.path.join(parent_folder, folder_name)
         if not os.path.isdir(folder):
             continue
+        if folder_name.startswith('.'):
+            continue
+        print('Processing folder ' + folder_name)
         tag = os.path.basename(folder)
         files = os.listdir(folder)
 

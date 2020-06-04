@@ -111,7 +111,7 @@ def collect(config, SLlist, run_dict):
         full_dump_path = os.path.join(full_deploy_path, 'core')
         subprocess.run(['mkdir', '-p', target_folder])
         subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, target_folder])
-        subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, os.path.join(target_folder, '_'.join(['core', str(i)]))])
+        subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_dump_path, os.path.join(target_folder, '_'.join(['core', str(i)]))])
 
 def genScript(config, SLlist, SLid, output_name):
     sl = SLlist[SLid]

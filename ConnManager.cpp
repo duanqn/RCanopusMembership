@@ -13,12 +13,6 @@ bool cmpRequestType(MessageRound2Preprepare *px, MessageRound2Preprepare *py){
 }
 
 char * ConnManager::recvMessage_caller_free_mem(int sock){
-    #ifdef DEBUG_PRINT
-    printf("Entering ConnManager::recvMessage_caller_free_mem\n");
-    AlgoLib::Util::TCleanup t([]{
-        printf("Leaving ConnManager::recvMessage_caller_free_mem\n");
-    });
-    #endif
     char headerBuf[sizeof(MessageHeader)];
     PeerConnection::recv(sock, sizeof(MessageHeader), headerBuf);
     MessageHeader_BE *pbeHeader = (MessageHeader_BE *)headerBuf;

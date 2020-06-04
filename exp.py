@@ -239,7 +239,7 @@ def main():
             deploy(config_parameters, dirs, SLlist, machine_file)
             print("Start servers...")
             applyArtificialNetworkLimit(config_parameters, SLlist)
-            start(config_parameters, SLlist)
+            start(config_parameters, SLlist, run)
             time.sleep(run['run_time_length'])
             stop(config_parameters, SLlist)
             print("Servers stopped")

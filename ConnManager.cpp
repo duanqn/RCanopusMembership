@@ -1747,14 +1747,13 @@ void ConnManager::dispatcher_round3_fetchConnectivityResponse(std::unique_ptr<Qu
         throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
     }
 
-    it->second->rgMsgRound3ConnectivityResponse[pConn->sender_BGid] = std::move(pElement);
-
     if(it->second->awaiting_message_type != MESSAGE_ROUND3_CONNECTIVITY_RESPONSE){
         printf("BG %hu SL %hu got connectivity response from BG %hu SL %hu for cycle %hu, but I am waiting for type %hu\n", m_upConfig->BGid, m_upConfig->SLid, pConn->sender_BGid, pConn->sender_SLid, pConn->cycle, it->second->awaiting_message_type);
         juggle(std::move(*pElement));
         return;
     }
 
+    it->second->rgMsgRound3ConnectivityResponse[pConn->sender_BGid] = std::move(pElement);
     it->second->message_received_counter++;
     if(it->second->message_received_counter == it->second->message_required){
         // TODO: also triggered by timer

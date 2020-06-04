@@ -534,7 +534,6 @@ bool ConnManager::canStartRound2(){
     if(pRound2_current_status == nullptr){
         // Has pending preprepare messages
         if(!pLeaderRound2PendingPreprepareRaw->empty()){
-            printf("canStartRound2() = true: pending preprepare\n");
             return true;
         }
 
@@ -543,21 +542,17 @@ bool ConnManager::canStartRound2(){
             // 0 is the leader itself
             if(rgLeader_batch_received_from[i] <= leader_batch_processed){
                 // next batch not ready
-                printf("canStartRound2() = false: no requests from SL %d\n", i);
                 return false;
             }
         }
 
         if(leader_batch_received_from_self <= leader_batch_processed){
-            printf("canStartRound2() = false: no requests from leader\n");
             return false;
         }
 
-        printf("canStartRound2() = true: process requests\n");
         return true;
     }
 
-    printf("canStartRound2() = false: current round 2 in progress\n");
     return false;
 }
 

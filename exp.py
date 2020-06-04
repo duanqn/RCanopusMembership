@@ -86,7 +86,7 @@ def delete(config, local_folders, SLlist):
 def start(config, SLlist):
     for i in range(0, len(SLlist)):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
-        subprocess.run(['bash', 'remoteStart.sh', config['username'], SLlist[i][2], full_deploy_path, config['executable name']])
+        subprocess.run(['bash', 'remoteExec.sh', config['username'], SLlist[i][2], full_deploy_path, config['executable name']])
 
 def startLocal(config, SLlist):
     for i in range(0, len(SLlist)):

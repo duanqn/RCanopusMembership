@@ -1345,6 +1345,7 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
         DebugThrow(pos == end); // The size calculation should be correct
 
         #ifdef DEBUG_PRINT
+        printf("Tolerated failures: %d of %d\n", m_upConfig->globalFailures, m_upConfig->numBG());
         printf("BG %d -- membership for cycle %hu:\n[", m_upConfig->BGid, cycleNumber);
 
         std::set<int> finalMembership;
@@ -1354,7 +1355,7 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
                 printf("%d ", i);
             }
             else{
-                printf("BG %d received %d votes, fewer than requirement %d votes", i, votes[i], m_upConfig->numBG() - m_upConfig->globalFailures);
+                printf("BG %d received %d votes, fewer than requirement %d votes! ", i, votes[i], m_upConfig->numBG() - m_upConfig->globalFailures);
             }
         }
 

@@ -64,10 +64,12 @@ int main(){
     }
     catch(FailFast &e){
         printf("FailFast at %s:%d\n", e.m_filename, e.m_line);
+        fflush(stdout);
         throw;
     }
     catch(Exception &e){
         printf("Exception code %d\n", e.getReason());
+        fflush(stdout);
         throw;
     }
     

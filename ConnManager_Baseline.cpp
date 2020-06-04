@@ -904,10 +904,16 @@ void ConnManager::dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> 
         return;
     }
 
+    MessageRound2PartialCommit* pPartialC = (MessageRound2PartialCommit *)pElement->pMessage;
+    if(pPartialC->view > pRound2_current_status->round2_view || pPartialC->seq > pRound2_current_status->round2_sequence){
+        // This is for a future cycle
+        juggle(std::move(*pElement));
+        return;
+    }
+
     DebugThrowElseReturnVoid(round2_isCollector);
     DebugThrowElseReturnVoid(pRound2_current_status->state == CycleState::ROUND2_COLLECTOR_WAITING_FOR_PARTIALCOMMITS);
-
-    MessageRound2PartialCommit* pPartialC = (MessageRound2PartialCommit *)pElement->pMessage;
+    
     DebugThrowElseReturnVoid(pPartialC->view == pRound2_current_status->round2_view);
     DebugThrowElseReturnVoid(pPartialC->seq == pRound2_current_status->round2_sequence);
 

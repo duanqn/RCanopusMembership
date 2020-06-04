@@ -83,10 +83,11 @@ def delete(config, local_folders, SLlist):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
         subprocess.run(['bash', 'deleteRemoteDir.sh', config['username'], SLlist[i][2], full_deploy_path])
 
-def start(config, SLlist):
+def start(config, SLlist, run_dict):
     for i in range(0, len(SLlist)):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
-        subprocess.run(['bash', 'remoteExec.sh', config['username'], SLlist[i][2], full_deploy_path, config['executable name']])
+        log_filename = run_dict['run_tag'] + '-BG' + str(SLlist[i][0]) + '-SL' + str(SLlist[i][1]) + '.log'
+        subprocess.run(['bash', 'remoteExec.sh', config['username'], SLlist[i][2], full_deploy_path, config['executable name'], log_filename])
 
 def startLocal(config, SLlist):
     for i in range(0, len(SLlist)):
@@ -107,8 +108,10 @@ def collect(config, SLlist, run_dict):
     for i in range(0, len(SLlist)):
         full_deploy_path = os.path.join(config['deploy dir'], config['deploy folder prefix'] + str(i))
         full_log_path = os.path.join(full_deploy_path, '*.log')
+        full_dump_path = os.path.join(full_deploy_path, 'core')
         subprocess.run(['mkdir', '-p', target_folder])
         subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, target_folder])
+        subprocess.run(['scp', config['username'] + '@' + SLlist[i][2] + ':' + full_log_path, os.path.join(target_folder, '_'.join(['core', str(i)]))])
 
 def genScript(config, SLlist, SLid, output_name):
     sl = SLlist[SLid]

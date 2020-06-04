@@ -61,6 +61,8 @@ def duplicate(config, BGinfo, SLid, run_dict):
         log_filename = run_dict['run_tag'] + 'BG' + str(SLid[i][0]) + '-SL' + str(SLid[i][1]) + '.log'
         with open(temp_file, 'w') as fout:
             fout.write('#!/bin/bash\n')
+            fout.write('ulimit -Hc unlimited\n')
+            fout.write('ulimit -Sc 52000\n')
             fout.write('./' + config['executable name'] + ' BG' + str(SLid[i][0]) + ' SL' + str(SLid[i][1]) + ' > ' + log_filename + ' &\n')
         
         subprocess.run(['mv', temp_file, os.path.join(dirname, helper_script)])

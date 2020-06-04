@@ -19,9 +19,6 @@ char * ConnManager::recvMessage_caller_free_mem(int sock){
     MessageHeader *pHeader = MessageHeader_BE::deserialize(pbeHeader);
 
     size_t extraLen = pHeader->payloadLen;
-    #ifdef DEBUG_PRINT
-    printf("ConnManager::recvMessage_caller_free_mem Payload size %lu\n", extraLen);
-    #endif
     char* buffer = new char[sizeof(MessageHeader) + extraLen];
     #ifdef MEM_DBG
     heapalloc.fetch_add(sizeof(MessageHeader) + extraLen);
@@ -1319,14 +1316,26 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
             MessageRound3FullMembership *pMembership = (MessageRound3FullMembership *)pos;
             DebugThrow(pMembership->totalBGnum == m_upConfig->numBG());
             for(int i = 0; i < pMembership->totalBGnum; ++i){
+                #ifdef DEBUG_PRINT
+                printf("[");
+                #endif
                 for(int j = 0; j < pMembership->totalBGnum; ++j){
                     if(*(bool *)(&(pMembership->connectivity[i * pMembership->totalBGnum + j]))){
                         votes[j]++; // This is a vote from i to j
+                        #ifdef DEBUG_PRINT
+                        printf("T|");
+                        #endif
                     }
                     else{
+                        #ifdef DEBUG_PRINT
+                        printf("F|");
+                        #endif
                         DebugThrow(false);  // We don't have failures yet
                     }
                 }
+                #ifdef DEBUG_PRINT
+                printf("]\n");
+                #endif
             }
 
             pos += sizeof(MessageHeader);
@@ -1343,6 +1352,9 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
             if(votes[i] >= m_upConfig->numBG() - m_upConfig->globalFailures){
                 finalMembership.insert(i);
                 printf("%d ", i);
+            }
+            else{
+                printf("BG %d received %d votes, fewer than requirement %d votes", i, votes[i], m_upConfig->numBG() - m_upConfig->globalFailures);
             }
         }
 
@@ -1737,7 +1749,9 @@ void ConnManager::dispatcher_round3_fetchConnectivityResponse(std::unique_ptr<Qu
     it->second->rgMsgRound3ConnectivityResponse[pConn->sender_BGid] = std::move(pElement);
 
     if(it->second->awaiting_message_type != MESSAGE_ROUND3_CONNECTIVITY_RESPONSE){
-        printf("BG %hu SL %hu got connectivity response from BG %hu SL %hu for cycle %hu, but I never asked for it!\n", m_upConfig->BGid, m_upConfig->SLid, pConn->sender_BGid, pConn->sender_SLid, pConn->cycle);
+        printf("BG %hu SL %hu got connectivity response from BG %hu SL %hu for cycle %hu, but I am waiting for type %hu\n", m_upConfig->BGid, m_upConfig->SLid, pConn->sender_BGid, pConn->sender_SLid, pConn->cycle, it->second->awaiting_message_type);
+        juggle(std::move(*pElement));
+        return;
     }
 
     it->second->message_received_counter++;

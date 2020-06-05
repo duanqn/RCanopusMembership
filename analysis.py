@@ -39,7 +39,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.output, 'w') as fout:
-        fout.write('# Tag | Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps) | Effective length (ms)\n')
+        fout.write('# Tag | Avg latency (ms) | 5-th percentile latency (ms) | 25-th percentile latency (ms) | 50-th percentile latency (ms) | 75-th percentile latency (ms) | 95-th percentile latency (ms) | Throughput (tps) | Effective length (s)\n')
 
     parent_folder = os.path.abspath(args.log_parent)
     folder_list = os.listdir(parent_folder)

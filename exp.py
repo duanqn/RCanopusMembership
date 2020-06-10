@@ -118,7 +118,7 @@ def genScript(config, SLlist, SLid, output_name):
     with open(output_name, 'w') as tcout:
         tcout.write('#!/bin/bash\n')
         tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-        tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit\n')
+        tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit ewma log 1\n')
 
         handle = 0
         for otherSL in SLlist:
@@ -133,7 +133,7 @@ def genScript(config, SLlist, SLid, output_name):
             else:
                 # inter-BG link
                 tcout.write(' cbq rate ' + config['inter-bg bandwidth in mbps'] + 'mbit')
-            tcout.write(' allot 1500 prio 5 bounded isolated\n')    # I don't really understand these
+            tcout.write(' avpkt 1000 allot 1500 prio 5 bandwidth 10gbit maxburst 8 bounded isolated\n')    # I don't really understand these
             
             tcout.write('sudo tc filter add dev ' + config['network interface name'])
             tcout.write(' parent 1: protocol ip prio 16 u32 match ip dst ' + otherSL[2])

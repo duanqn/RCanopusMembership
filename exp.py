@@ -147,12 +147,12 @@ def genScript(config, SLlist, SLid, output_name):
                 tcout.write(' flowid 1:2')
                 tcout.write('\n')
 
-            intra_bg_latency = int(int(config['intra-bg roundtrip latency in ms']) / 2)
-            inter_bg_latency = int(int(config['inter-bg roundtrip latency in ms']) / 2)
-            tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-            tcout.write(' parent 1:1 netem delay ' + str(intra_bg_latency) + 'ms\n')
-            tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-            tcout.write(' parent 1:2 netem delay ' + str(inter_bg_latency) + 'ms\n')
+        intra_bg_latency = int(int(config['intra-bg roundtrip latency in ms']) / 2)
+        inter_bg_latency = int(int(config['inter-bg roundtrip latency in ms']) / 2)
+        tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
+        tcout.write(' parent 1:1 netem delay ' + str(intra_bg_latency) + 'ms\n')
+        tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
+        tcout.write(' parent 1:2 netem delay ' + str(inter_bg_latency) + 'ms\n')
 
 def applyArtificialNetworkLimit(config, SLlist):
     for i in range(0, len(SLlist)):

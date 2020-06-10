@@ -118,39 +118,41 @@ def genScript(config, SLlist, SLid, output_name):
     with open(output_name, 'w') as tcout:
         tcout.write('#!/bin/bash\n')
         tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-        tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit ewma 1\n')
+        tcout.write(' root handle 1: htb 1\n')
 
-        handle = 0
+        # intra-BG
+        tcout.write('sudo tc class add dev ' + config['network interface name'])
+        tcout.write(' parent 1: classid 1:1 htb rate 10gbit ceil 10gbit burst 5m\n')
+
+        # inter-BG
+        bw = int(config['inter-bg bandwidth in mbps'])
+        burst = bw / 250 / 8 / 1000 # 250HZ, 8 bit -> 1 byte
+        tcout.write('sudo tc class add dev ' + config['network interface name'])
+        tcout.write(' parent 1: classid 1:2 htb rate '+ config['inter-bg bandwidth in mbps'] + 'mbit burst ' + str(burst) + 'k\n')
+
         for otherSL in SLlist:
             if sl[0] == otherSL[0] and sl[1] == otherSL[1]:
                 continue
-            handle += 1
-            tcout.write('sudo tc class add dev ' + config['network interface name'])
-            tcout.write(' parent 1: classid 1:' + str(handle))
-            if sl[0] == otherSL[0]:
-                # same BG
-                tcout.write(' cbq rate 10gbit')
-            else:
-                # inter-BG link
-                tcout.write(' cbq rate ' + config['inter-bg bandwidth in mbps'] + 'mbit')
-            tcout.write(' avpkt 1000 allot 1500 prio 5 bandwidth 10gbit maxburst 8 bounded isolated\n')    # I don't really understand these
             
-            tcout.write('sudo tc filter add dev ' + config['network interface name'])
-            tcout.write(' parent 1: protocol ip prio 16 u32 match ip dst ' + otherSL[2])
-            tcout.write(' flowid 1:' + str(handle))
-            #tcout.write(' action police rate ' + config['inter-bg bandwidth in mbps'] + 'mbit burst 40m conform-exceed shot/pipe')
-            tcout.write('\n')
-
-            tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-            tcout.write(' parent 1:' + str(handle))
-
             if sl[0] == otherSL[0]:
-                # same BG
-                latency = int(int(config['intra-bg roundtrip latency in ms']) / 2)
+                # intra-BG
+                tcout.write('sudo tc filter add dev ' + config['network interface name'])
+                tcout.write(' parent 1: protocol ip prio 16 u32 match ip dst ' + otherSL[2])
+                tcout.write(' flowid 1:1')
+                tcout.write('\n')
             else:
-                # inter-BG link
-                latency = int(int(config['inter-bg roundtrip latency in ms']) / 2)
-            tcout.write(' netem delay ' + str(latency) + 'ms\n')
+                # inter-BG
+                tcout.write('sudo tc filter add dev ' + config['network interface name'])
+                tcout.write(' parent 1: protocol ip prio 16 u32 match ip dst ' + otherSL[2])
+                tcout.write(' flowid 1:2')
+                tcout.write('\n')
+
+            intra_bg_latency = int(int(config['intra-bg roundtrip latency in ms']) / 2)
+            inter_bg_latency = int(int(config['inter-bg roundtrip latency in ms']) / 2)
+            tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
+            tcout.write(' parent 1:1 netem delay ' + str(intra_bg_latency) + 'ms\n')
+            tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
+            tcout.write(' parent 1:2 netem delay ' + str(inter_bg_latency) + 'ms\n')
 
 def applyArtificialNetworkLimit(config, SLlist):
     for i in range(0, len(SLlist)):

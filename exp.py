@@ -118,7 +118,7 @@ def genScript(config, SLlist, SLid, output_name):
     with open(output_name, 'w') as tcout:
         tcout.write('#!/bin/bash\n')
         tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-        tcout.write(' root handle 1: htb 1\n')
+        tcout.write(' root handle 1: htb\n')
 
         # intra-BG
         tcout.write('sudo tc class add dev ' + config['network interface name'])

@@ -218,6 +218,7 @@ def main():
 
     if args.killonly:
         dirs = duplicate(config_parameters, BGinfo, SLlist, runs[0])
+        clearArtificialNetworkLimit(config_parameters, machine_file)
         stop(config_parameters, SLlist)
         delete(config_parameters, dirs, SLlist)
     elif args.run_local:

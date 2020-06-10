@@ -118,7 +118,7 @@ def genScript(config, SLlist, SLid, output_name):
     with open(output_name, 'w') as tcout:
         tcout.write('#!/bin/bash\n')
         tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
-        tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit ewma log 1\n')
+        tcout.write(' root handle 1: cbq avpkt 1000 bandwidth 10gbit ewma 1\n')
 
         handle = 0
         for otherSL in SLlist:

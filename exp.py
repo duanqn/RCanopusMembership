@@ -138,7 +138,8 @@ def genScript(config, SLlist, SLid, output_name):
             tcout.write('sudo tc filter add dev ' + config['network interface name'])
             tcout.write(' parent 1: protocol ip prio 16 u32 match ip dst ' + otherSL[2])
             tcout.write(' flowid 1:' + str(handle))
-            tcout.write(' action police rate ' + config['inter-bg bandwidth in mbps'] + 'mbit burst 40m conform-exceed shot/pipe\n')
+            #tcout.write(' action police rate ' + config['inter-bg bandwidth in mbps'] + 'mbit burst 40m conform-exceed shot/pipe')
+            tcout.write('\n')
 
             tcout.write('sudo tc qdisc add dev ' + config['network interface name'])
             tcout.write(' parent 1:' + str(handle))

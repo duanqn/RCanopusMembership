@@ -1,0 +1,121 @@
+# num of graphs
+8
+latency-throughput-bw1000.png
+caption: Throughput-latency graph (1000 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = 
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-bw500.png
+caption: Throughput-latency graph (500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = 
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-bw250.png
+caption: Throughput-latency graph (250 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = 
+cond: inter-bg bandwidth = 250
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-bw100.png
+caption: Throughput-latency graph (100 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = 
+cond: inter-bg bandwidth = 100
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-bw1000.png
+caption: Throughput-latency graph of the baseline (1000 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-bw500.png
+caption: Throughput-latency graph of the baseline (500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-bw250.png
+caption: Throughput-latency graph of the baseline (250 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 250
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-bw100.png
+caption: Throughput-latency graph of the baseline (100 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 100
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)

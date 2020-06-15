@@ -82,8 +82,6 @@ def parseGraph(lines, pos):
         data_candidate = [data_entry for data_entry in data_candidate if data_entry[column[k]] == v]
     
     data_candidate = sorted(data_candidate, key=lambda entry: entry[column[xtype]])
-    for data_candidate_entry in data_candidate:
-        print(data_candidate_entry)
 
     line, pos = parseNextLine(lines, pos)
     numY = int(line)
@@ -154,7 +152,7 @@ def main(args):
         line = lines[i]
         if 'ERROR' in line:
             continue
-        
+
         segs = line.split('|')
         for j in range(0, len(segs)):
             segs[j] = segs[j].strip('\n').strip()
@@ -167,8 +165,11 @@ def main(args):
         latency_95 = float(segs[6])
         throughput = float(segs[7])
         time = float(segs[8])
-
-        data.append([tag, latency_avg, latency_5, latency_25, latency_50, latency_75, latency_95, throughput, time])
+        if time < 250:
+            print('Warning: data discarded due to insufficient exp length')
+            print(line)
+        else:
+            data.append([tag, latency_avg, latency_5, latency_25, latency_50, latency_75, latency_95, throughput, time])
 
     for data_entry in data:
         tag = data_entry[0]

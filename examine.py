@@ -26,15 +26,15 @@ def main():
         print("These folder will be removed:")
         for folder in mark_as_delete:
             print(folder)
+        
         yn = input("Confirm? (Y/N) ")
+        if yn == 'Y' or yn == 'y':
+            for folder in mark_as_delete:
+                subprocess.run(['rm', '-r', folder])
+        else:
+            print('Aborted')
     else:
         print("No crashed runs")
-
-    if yn == 'Y' or yn == 'y':
-        for folder in mark_as_delete:
-            subprocess.run(['rm', '-r', folder])
-    else:
-        print('Aborted')
 
 if __name__ == "__main__":
     main()

@@ -22,10 +22,13 @@ def main():
                 mark_as_delete.append(fullname)
                 break
 
-    print("These folder will be removed:")
-    for folder in mark_as_delete:
-        print(folder)
-    yn = input("Confirm? (Y/N)")
+    if len(mark_as_delete) > 0:
+        print("These folder will be removed:")
+        for folder in mark_as_delete:
+            print(folder)
+        yn = input("Confirm? (Y/N) ")
+    else:
+        print("No crashed runs")
 
     if yn == 'Y' or yn == 'y':
         for folder in mark_as_delete:

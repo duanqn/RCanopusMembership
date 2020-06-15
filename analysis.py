@@ -32,6 +32,7 @@ def calcThroughput(unsorted_tuple_list, time_interval):
 def main():
     parser = argparse.ArgumentParser(description = '')
     parser.add_argument('-p', '--log-parent-path', type=str, dest='log_parent', required=True, help='Path to the parent folder of the log folder')
+    parser.add_argument('-t', '--minimal-time', type=float, dest='mintime', required=False, default=0, help='Minimal length of an experiment')
     parser.add_argument('-f', '--cut-front', type=int, dest='cut_front', required=False, default=15, help='Seconds to cut off at the beginning of the experiment')
     parser.add_argument('-e', '--cut-end', type=int, dest='cut_end', required=False, default=10, help='Seconds to cut off at the end of the experiment')
     parser.add_argument('-o', '--output', type=str, dest='output', required=True, help='File to store the analyze result')
@@ -97,6 +98,9 @@ def main():
                 if tuple_time >= timestamp_threshold_front and tuple_time <= timestamp_threshold_end:
                     qualified_committed_result.append(result_tuple)
         except Exception as e:
+            ERRFLAG = True
+
+        if timestamp_threshold_end - timestamp_threshold_front < args.mintime:
             ERRFLAG = True
 
         if not ERRFLAG:

@@ -100,7 +100,7 @@ def main():
         except Exception as e:
             ERRFLAG = True
 
-        if timestamp_threshold_end - timestamp_threshold_front < args.mintime:
+        if ERRFLAG == False and timestamp_threshold_end - timestamp_threshold_front < args.mintime:
             ERRFLAG = True
 
         if not ERRFLAG:

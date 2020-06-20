@@ -1,5 +1,5 @@
 # num of graphs
-20
+30
 latency-throughput-bw1000.png
 caption: Throughput-latency graph (1000 Mbps)
 # x-axis
@@ -296,6 +296,164 @@ cond: intra-bg latency = 10
 cond: inter-bg latency = 160
 cond: note = baseline
 cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+###########################
+
+latency-throughput-3bg.png
+caption: Throughput-latency graph (3 BG)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 3
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note =
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-3bg-bw500.png
+caption: Throughput-latency graph (3 BG, 500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 3
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note =
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-2bg.png
+caption: Throughput-latency graph (2 BG)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 2
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note =
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-2bg-bw500.png
+caption: Throughput-latency graph (2 BG, 500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 2
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note =
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+##################################
+
+latency-throughput-baseline-3bg.png
+caption: Throughput-latency graph for baseline (3 BG)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 3
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-3bg-bw500.png
+caption: Throughput-latency graph for baseline (3 BG, 500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 3
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-2bg.png
+caption: Throughput-latency graph for baseline (2 BG)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 2
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-baseline-2bg-bw500.png
+caption: Throughput-latency graph for baseline (2 BG, 500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 2
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = baseline
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+#############################
+
+latency-throughput-inter80-bw500.png
+caption: Throughput-latency graph (80 ms, 500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 80
+cond: note =
+cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+###################################
+
+latency-throughput-baseline-inter80-bw500.png
+caption: Throughput-latency graph of the baseline (80 ms, 500 Mbps)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 80
+cond: note = baseline
+cond: inter-bg bandwidth = 500
 # num of y-axes
 2
 y: throughput = Throughput (tps)

@@ -139,6 +139,7 @@ def parseGraph(lines, pos):
         ax.legend(loc=2)
     plt.tight_layout()
     fig.savefig(filename)
+    plt.close(fig)
     return pos
         
 

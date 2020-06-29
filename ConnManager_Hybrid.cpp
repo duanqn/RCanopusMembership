@@ -57,16 +57,16 @@ char * ConnManager::recvMessage_caller_free_mem(int sock){
         MessageRound3FetchResponse_BE::partialDeserialize((MessageRound3FetchResponse_BE *)buffer);
         break;
 
-        case MESSAGE_ROUND3_PREPREPARE_BASELINE:
-        MessageRound3PreprepareBaseline_BE::partialDeserialize((MessageRound3PreprepareBaseline_BE *)buffer);
+        case MESSAGE_ROUND3_GENERAL_FETCH:
+        MessageRound3GeneralFetch_BE::partialDeserialize((MessageRound3GeneralFetch_BE *)buffer);
         break;
 
-        case MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE:
-        MessageRound3PartialCommitBaseline_BE::partialDeserialize((MessageRound3PartialCommitBaseline_BE *)buffer);
+        case MESSAGE_ROUND3_CONNECTIVITY_RESPONSE:
+        MessageRound3Connectivity_BE::partialDeserialize((MessageRound3Connectivity_BE *)buffer);
         break;
 
-        case MESSAGE_ROUND3_FULL_COMMIT_BASELINE:
-        MessageRound3FullCommitBaseline_BE::partialDeserialize((MessageRound3FullCommitBaseline_BE *)buffer);
+        case MESSAGE_ROUND3_MEMBERSHIP_RESPONSE:
+        MessageRound3FullMembership_BE::partialDeserialize((MessageRound3FullMembership_BE *)buffer);
         break;
 
         default:
@@ -362,6 +362,9 @@ void ConnManager::listener(){
                     }
                     else{
                         // recv packet
+                        #ifdef DEBUG_PRINT
+                        printf("Receiving message from poll slot %d\n", i);
+                        #endif
                         char *pMessage = recvMessage_caller_free_mem(rgPoll[i].fd);
                         QueueElement element;
                         element.pMessage = (MessageHeader *)pMessage;
@@ -454,6 +457,10 @@ void ConnManager::sender(){
             }
         }
 
+        #ifdef DEBUG_PRINT
+        uint16_t messageType = element.pMessage->msgType;
+        #endif
+
         // Convert byte order
         switch(element.pMessage->msgType){
             case MESSAGE_HELLO:
@@ -484,16 +491,16 @@ void ConnManager::sender(){
             MessageRound3FetchResponse::serialize((MessageRound3FetchResponse *)element.pMessage);
             break;
 
-            case MESSAGE_ROUND3_PREPREPARE_BASELINE:
-            MessageRound3PreprepareBaseline::serialize((MessageRound3PreprepareBaseline *)element.pMessage);
+            case MESSAGE_ROUND3_GENERAL_FETCH:
+            MessageRound3GeneralFetch::serialize((MessageRound3GeneralFetch *)element.pMessage);
             break;
 
-            case MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE:
-            MessageRound3PartialCommitBaseline::serialize((MessageRound3PartialCommitBaseline *)element.pMessage);
+            case MESSAGE_ROUND3_CONNECTIVITY_RESPONSE:
+            MessageRound3Connectivity::serialize((MessageRound3Connectivity *)element.pMessage);
             break;
 
-            case MESSAGE_ROUND3_FULL_COMMIT_BASELINE:
-            MessageRound3FullCommitBaseline::serialize((MessageRound3FullCommitBaseline *)element.pMessage);
+            case MESSAGE_ROUND3_MEMBERSHIP_RESPONSE:
+            MessageRound3FullMembership::serialize((MessageRound3FullMembership *)element.pMessage);
             break;
 
             default:
@@ -510,6 +517,9 @@ void ConnManager::sender(){
             }
 
             pPeer->send((char *)element.pMessage, totalLength);
+            #ifdef DEBUG_PRINT
+            printf("BG %d SL %d sent message to BG %d SL %d, type %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPeer->m_upRemotePeer->m_BGid, pPeer->m_upRemotePeer->m_SLid, messageType);
+            #endif
         }
     }
 }
@@ -539,6 +549,7 @@ bool ConnManager::canStartRound2(){
 
         return true;
     }
+
     return false;
 }
 
@@ -617,7 +628,7 @@ void ConnManager::dispatcher_round2(std::unique_ptr<QueueElement> pElement){
             leader_round2_sendPreprepare();
         }
         return;
-
+        
         case MESSAGE_ROUND2_REQUEST:
         return dispatcher_round2_request(std::move(pElement));
 
@@ -636,14 +647,14 @@ void ConnManager::dispatcher_round2(std::unique_ptr<QueueElement> pElement){
         case MESSAGE_ROUND3_FETCH_RESPONSE:
         return dispatcher_round3_fetchResponse(std::move(pElement));
 
-        case MESSAGE_ROUND3_PREPREPARE_BASELINE:
-        return dispatcher_round3_preprepare(std::move(pElement));
+        case MESSAGE_ROUND3_GENERAL_FETCH:
+        return dispatcher_round3_generalFetchRequest(std::move(pElement));
 
-        case MESSAGE_ROUND3_PARTIAL_COMMIT_BASELINE:
-        return dispatcher_round3_partialCommit(std::move(pElement));
+        case MESSAGE_ROUND3_CONNECTIVITY_RESPONSE:
+        return dispatcher_round3_fetchConnectivityResponse(std::move(pElement));
 
-        case MESSAGE_ROUND3_FULL_COMMIT_BASELINE:
-        return dispatcher_round3_fullCommit(std::move(pElement));
+        case MESSAGE_ROUND3_MEMBERSHIP_RESPONSE:
+        return dispatcher_round3_fetchMembershipResponse(std::move(pElement));
 
         default:
         throw Exception(Exception::EXCEPTION_MESSAGE_INVALID_TYPE);
@@ -754,8 +765,6 @@ void ConnManager::leader_round2_sendPreprepare(){
         leader_collector_rr = 0u;
     }
 
-    
-
     // Add to outbound queue
     QueueElement element;
     element.pMessage = (MessageHeader *)pPreprepare;
@@ -821,6 +830,20 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     if(pPreprepare->view > round2_next_view || (pPreprepare->view == round2_next_view && pPreprepare->seq > round2_next_seq)){
         juggle(std::move(*pElement));
         return;
+    }
+
+    // Ensure Round 3 has been finished
+    if(pPreprepare->requestType == REQUEST_TYPE_LOCAL_CONNECTIVITY){
+        auto it = mapRound3Status.find(pPreprepare->cycle);
+        if(it == mapRound3Status.end()){
+            juggle(std::move(*pElement));
+            return;
+        }
+
+        if(it->second->state != CycleState::ROUND3_WAITING_FOR_LOCAL_CONNECTIVITY){
+            juggle(std::move(*pElement));
+            return;
+        }
     }
 
     DebugThrowElseReturnVoid(pPreprepare->view == round2_next_view);    // May need to change if allow ViewChange
@@ -1011,21 +1034,6 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
     #endif
     
     if(pPreprepare->requestType == REQUEST_TYPE_FROM_CLIENT){
-        if(pPreprepare->view == 1 && pPreprepare->seq == 1){
-            // first message, prepare fake response with it
-            size_t totalSize = getMessageSize((MessageHeader *)pPreprepare);
-            fakeRound3ResponseForBaseline = new char[sizeof(MessageRound3FetchResponse) + totalSize];
-            MessageRound3FetchResponse *pResp = (MessageRound3FetchResponse *)fakeRound3ResponseForBaseline;
-            pResp->header.version = VERSION_LATEST;
-            pResp->header.msgType = MESSAGE_ROUND3_FETCH_RESPONSE;
-            pResp->header.payloadLen = sizeof(MessageRound3FetchResponse) - sizeof(MessageHeader) + totalSize;
-
-            pResp->cycle = 0;   // fill later
-            pResp->sender_BGid = m_upConfig->BGid;
-            pResp->sender_SLid = m_upConfig->SLid;
-            memset(pResp->combinedSignature, 0, sizeof(pResp->combinedSignature));
-        }
-
         for(uint16_t cycleNumber = pPreprepare->lastcycle + 1; cycleNumber < pPreprepare->cycle; ++cycleNumber){
             // Skipped cycles
             DebugThrow(false);  // We haven't implemented SkipCycle;
@@ -1076,6 +1084,81 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
         round3_respondToPendingFetchRequests(cycleNumber);
         envoy_round3_sendFetchRequest(cycleNumber);
     }
+    else if(pPreprepare->requestType == REQUEST_TYPE_FETCHED_RESULT){
+        uint16_t cycleNumber = pPreprepare->cycle;
+        auto it = mapRound3Status.find(cycleNumber);
+        if(it == mapRound3Status.end()){
+            printf("Fetched result full commit: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycleNumber);
+            throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+        }
+
+        // Some acrobat
+        size_t remotePreprepareSize = pPreprepare->header.payloadLen + sizeof(MessageHeader) - sizeof(MessageRound2Preprepare) - SBFT_COMBINED_SIGNATURE_SIZE;
+        MessageRound3FetchResponse *pFetchResponse = (MessageRound3FetchResponse *)new char[sizeof(MessageRound3FetchResponse) + remotePreprepareSize];
+        #ifdef MEM_DBG
+        heapalloc.fetch_add(sizeof(MessageRound3FetchResponse) + remotePreprepareSize);
+        #endif
+        pFetchResponse->header.version = VERSION_LATEST;
+        pFetchResponse->header.msgType = MESSAGE_ROUND3_FETCH_RESPONSE;
+        pFetchResponse->header.payloadLen = sizeof(MessageRound3FetchResponse) - sizeof(MessageHeader) + remotePreprepareSize;
+        pFetchResponse->sender_BGid = pPreprepare->BGid;
+        pFetchResponse->sender_SLid = INVALID_SENDER_ID;
+        pFetchResponse->cycle = cycleNumber;
+        memcpy(pFetchResponse->combinedSignature, pPreprepare->participantsAndContent, SBFT_COMBINED_SIGNATURE_SIZE);
+        memcpy(pFetchResponse->entirePreprepareMsg, pPreprepare->participantsAndContent + SBFT_COMBINED_SIGNATURE_SIZE, remotePreprepareSize);
+
+        DebugThrowElseReturnVoid(it->second->rgMsgRound3FetchResponse[pPreprepare->BGid] == nullptr);
+        it->second->rgMsgRound3FetchResponse[pPreprepare->BGid] = std::make_unique<QueueElement>();
+        it->second->rgMsgRound3FetchResponse[pPreprepare->BGid]->pMessage = (MessageHeader *)pFetchResponse;
+
+        // These are no longer needed
+        pTemporaryStorageOfPreprepare = nullptr;
+        pRound2_current_status = nullptr;
+
+        DebugThrow(it->second->awaiting_message_type == MESSAGE_ROUND3_FETCH_RESPONSE);
+        it->second->message_received_counter++;
+        if(it->second->message_received_counter == it->second->message_required){
+            it->second->state = CycleState::ROUND3_WAITING_FOR_LOCAL_CONNECTIVITY;
+            it->second->awaiting_message_type = MESSAGE_ROUND2_FULL_COMMIT;
+            it->second->message_required = 1;
+            it->second->message_received_counter = 0;
+
+            if(isRound2Leader()){
+                size_t connectivity_size = sizeof(uint16_t) + sizeof(char) * m_upConfig->numBG();
+                char *buffer = new char[sizeof(MessageRound2Preprepare) + connectivity_size];
+                #ifdef MEM_DBG
+                heapalloc.fetch_add(sizeof(MESSAGE_ROUND2_PREPREPARE) + connectivity_size);
+                #endif
+                MessageRound2Preprepare *pNextPreprepare = (MessageRound2Preprepare *)buffer;
+                pNextPreprepare->header.version = VERSION_LATEST;
+                pNextPreprepare->header.msgType = MESSAGE_ROUND2_PREPREPARE;
+                pNextPreprepare->header.payloadLen = sizeof(MessageRound2Preprepare) - sizeof(MessageHeader) + connectivity_size;
+
+                pNextPreprepare->sender = m_upConfig->SLid; // always 0
+                pNextPreprepare->view = 0;  // will be filled later
+                pNextPreprepare->seq = 0;   // will be filled later
+                pNextPreprepare->BGid = m_upConfig->BGid;
+                pNextPreprepare->requestType = REQUEST_TYPE_LOCAL_CONNECTIVITY;
+                pNextPreprepare->cycle = cycleNumber;
+                pNextPreprepare->lastcycle = cycleNumber - 1;
+                pNextPreprepare->collector_SLid = 0;    // will be filled later
+                pNextPreprepare->numOfRound3Participants = 0;
+                *(uint16_t *)pNextPreprepare->participantsAndContent = m_upConfig->numBG();
+                char *pos = pNextPreprepare->participantsAndContent + sizeof(uint16_t);
+                for(int i = 0; i < m_upConfig->numBG(); ++i){
+                    if(it->second->rgMsgRound3FetchResponse[i] != nullptr){
+                        *pos = 1;
+                    }
+                    else{
+                        *pos = 0;
+                    }
+                    ++pos;
+                }
+
+                pLeaderRound2PendingPreprepareRaw->push(pNextPreprepare);
+            }
+        }
+    }
     else if(pPreprepare->requestType == REQUEST_TYPE_LOCAL_CONNECTIVITY){
         uint16_t cycleNumber = pPreprepare->cycle;
         auto it = mapRound3Status.find(cycleNumber);
@@ -1084,66 +1167,221 @@ void ConnManager::dispatcher_round2_fullCommit(std::unique_ptr<QueueElement> pEl
             throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
         }
 
-        if(it->second->state != CycleState::ROUND3_WAITING_FOR_LOCAL_CONNECTIVITY){
-            // Manually reset state
-            pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_FULLCOMMIT;
-            juggle(std::move(*pElement));
-            // Do not clear round 2 status
-            return;
-        }
+        DebugThrowElseReturnVoid(it->second->state == CycleState::ROUND3_WAITING_FOR_LOCAL_CONNECTIVITY);
 
-        if(isGlobalLeader()){
-            // Send Preprepare in Round 3
-            size_t membershipSize = sizeof(uint16_t) * m_upConfig->numBG();
-            size_t totalSize = sizeof(MessageRound3PreprepareBaseline) + membershipSize;
-            char *buffer = new char[totalSize];
-            MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)buffer;
-            pPreprepare3->header.version = VERSION_LATEST;
-            pPreprepare3->header.msgType = MESSAGE_ROUND3_PREPREPARE_BASELINE;
-            pPreprepare3->header.payloadLen = totalSize - sizeof(MessageHeader);
-
-            pPreprepare3->sender = m_upConfig->BGid;    // always 0
-            pPreprepare3->cycle = cycleNumber;
-
-            std::uniform_int_distribution<int> dist(0, m_upConfig->numBG() - 1);
-            pPreprepare3->collector_BGid = (uint16_t) dist(m_engine);
-
-            uint16_t *pMembership = (uint16_t *)pPreprepare3->content;
-            for(int i = 0; i < m_upConfig->numBG(); ++i){
-                pMembership[i] = (uint16_t) i;
-            }
-
-            QueueElement element;
-            element.pMessage = (MessageHeader *)pPreprepare3;
-            for(int i = 0; i < m_upConfig->numBG(); ++i){
-                if(i == m_upConfig->BGid){
-                    // send to myself
-                    element.upPeers->push_front(nullptr);
-                }
-                else{
-                    element.upPeers->push_front(&rgrgConnection[i][0]);
-                }
-            }
-
-            sendQueue.enqueue(std::move(element));
-        }
+        MessageRound3Connectivity *pConnectivityResponse = getRound3Response_caller_free_mem(pPreprepare, pFullC, m_upConfig->SLid, cycleNumber);
+        pConnectivityResponse->header.msgType = MESSAGE_ROUND3_CONNECTIVITY_RESPONSE;
+        
+        DebugThrowElseReturnVoid(it->second->rgMsgRound3ConnectivityResponse[m_upConfig->BGid] == nullptr);
+        it->second->rgMsgRound3ConnectivityResponse[m_upConfig->BGid] = std::make_unique<QueueElement>();
+        it->second->rgMsgRound3ConnectivityResponse[m_upConfig->BGid]->pMessage = (MessageHeader *)pConnectivityResponse;
+        it->second->state = CycleState::ROUND3_WAITING_FOR_REPLICATED_CONNECTIVITY;
+        it->second->message_received_counter = 0;
+        it->second->message_required = m_upConfig->numBG() - 1;
+        it->second->awaiting_message_type = MESSAGE_ROUND3_CONNECTIVITY_RESPONSE;
 
         pTemporaryStorageOfPreprepare = nullptr;
         pRound2_current_status = nullptr;
-        
-        if(isRound2Leader()){
-            it->second->awaiting_message_type = MESSAGE_ROUND3_PREPREPARE_BASELINE;
-            it->second->message_received_counter = 0;
+
+        round3_respondToPendingFetchConnectivityRequests(cycleNumber);
+        envoy_round3_sendFetchConnectivityRequest(cycleNumber);
+    }
+    else if(pPreprepare->requestType == REQUEST_TYPE_REMOTE_CONNECTIVITY){
+        DebugThrow(false);  // this case has been eliminated
+        uint16_t cycleNumber = pPreprepare->cycle;
+        auto it = mapRound3Status.find(cycleNumber);
+        if(it == mapRound3Status.end()){
+            printf("Remote connectivity full commit: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycleNumber);
+            throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+        }
+
+        // Some acrobat
+        size_t remotePreprepareSize = pPreprepare->header.payloadLen + sizeof(MessageHeader) - sizeof(MessageRound2Preprepare) - SBFT_COMBINED_SIGNATURE_SIZE;
+        MessageRound3Connectivity *pConnResponse = (MessageRound3Connectivity *)new char[sizeof(MessageRound3Connectivity) + remotePreprepareSize];
+        #ifdef MEM_DBG
+        heapalloc.fetch_add(sizeof(MessageRound3Connectivity) + remotePreprepareSize);
+        #endif
+
+        pConnResponse->header.version = VERSION_LATEST;
+        pConnResponse->header.msgType = MESSAGE_ROUND3_CONNECTIVITY_RESPONSE;
+        pConnResponse->header.payloadLen = remotePreprepareSize + sizeof(MessageRound3Connectivity) - sizeof(MessageHeader);
+
+        pConnResponse->sender_BGid = pPreprepare->BGid;
+        pConnResponse->sender_SLid = INVALID_SENDER_ID;
+        pConnResponse->cycle = pPreprepare->cycle;
+
+        memcpy(pConnResponse->combinedSignature, pPreprepare->participantsAndContent, SBFT_COMBINED_SIGNATURE_SIZE);
+        memcpy(pConnResponse->entirePreprepareMsg, pPreprepare->participantsAndContent + SBFT_COMBINED_SIGNATURE_SIZE, remotePreprepareSize);
+
+        DebugThrowElseReturnVoid(it->second->rgMsgRound3FetchResponse[pPreprepare->BGid] == nullptr);
+        it->second->rgMsgRound3FetchResponse[pPreprepare->BGid] = std::make_unique<QueueElement>();
+        it->second->rgMsgRound3FetchResponse[pPreprepare->BGid]->pMessage = (MessageHeader *)pConnResponse;
+
+        // These are no longer needed
+        pTemporaryStorageOfPreprepare = nullptr;
+        pRound2_current_status = nullptr;
+
+        DebugThrow(it->second->state == CycleState::ROUND3_WAITING_FOR_REPLICATED_CONNECTIVITY);
+        DebugThrow(it->second->awaiting_message_type == MESSAGE_ROUND3_CONNECTIVITY_RESPONSE);
+        it->second->message_received_counter++;
+
+        if(it->second->message_received_counter == it->second->message_required){
+            it->second->state = CycleState::ROUND3_WAITING_FOR_LOCAL_MEMBERSHIP;
+            it->second->awaiting_message_type = MESSAGE_ROUND2_FULL_COMMIT;
             it->second->message_required = 1;
-            it->second->state = CycleState::ROUND3_WAITING_FOR_PREPREPARE_BASELINE;
-        }
-        else{
-            it->second->awaiting_message_type = MESSAGE_INVALID;
             it->second->message_received_counter = 0;
-            it->second->message_required = 0;
-            it->second->state = CycleState::ROUND3_COMMITTED;
-            round3_committed(cycleNumber);
+
+            if(isRound2Leader()){
+                uint16_t BGnum = m_upConfig->numBG();
+                size_t membershipSize = sizeof(uint16_t) + BGnum * BGnum * sizeof(char);
+                
+                char *buffer = new char[sizeof(MessageRound2Preprepare) + membershipSize];
+                #ifdef MEM_DBG
+                heapalloc.fetch_add(sizeof(MessageRound2Preprepare) + membershipSize);
+                #endif
+                MessageRound2Preprepare *pNextPreprepare = (MessageRound2Preprepare *)buffer;
+
+                pNextPreprepare->header.version = VERSION_LATEST;
+                pNextPreprepare->header.msgType = MESSAGE_ROUND2_PREPREPARE;
+                pNextPreprepare->header.payloadLen = sizeof(MessageRound2Preprepare) + membershipSize - sizeof(MessageHeader);
+
+                pNextPreprepare->sender = m_upConfig->SLid;
+                pNextPreprepare->view = 0;  // to be filled later
+                pNextPreprepare->seq = 0;   // to be filled later
+                pNextPreprepare->BGid = m_upConfig->BGid;
+                pNextPreprepare->requestType = REQUEST_TYPE_LOCAL_MEMBERSHIP;
+                pNextPreprepare->cycle = cycleNumber;
+                pNextPreprepare->lastcycle = cycleNumber - 1;
+                pNextPreprepare->collector_SLid = 0;    // to be filled later;
+                pNextPreprepare->numOfRound3Participants = 0;   // does not trigger round 3
+
+            }
         }
+    }
+    else if(pPreprepare->requestType == REQUEST_TYPE_LOCAL_MEMBERSHIP){
+        uint16_t cycleNumber = pPreprepare->cycle;
+        auto it = mapRound3Status.find(cycleNumber);
+        if(it == mapRound3Status.end()){
+            printf("Local membership full commit: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycleNumber);
+            throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+        }
+
+        size_t membershipSize = m_upConfig->numBG() * m_upConfig->numBG() * sizeof(bool);
+        size_t totalSize = membershipSize + sizeof(MessageRound3FullMembership);
+
+        DebugThrowElseReturnVoid(it->second->rgMsgRound3MembershipResponse[m_upConfig->BGid] == nullptr);
+        it->second->rgMsgRound3MembershipResponse[m_upConfig->BGid] = std::make_unique<QueueElement>();
+        it->second->rgMsgRound3MembershipResponse[m_upConfig->BGid]->pMessage = (MessageHeader *)new char[totalSize];
+        #ifdef MEM_DBG
+        heapalloc.fetch_add(totalSize);
+        #endif
+
+        MessageRound3FullMembership *pMembership = (MessageRound3FullMembership *)it->second->rgMsgRound3MembershipResponse[m_upConfig->BGid]->pMessage;
+        pMembership->header.version = VERSION_LATEST;
+        pMembership->header.msgType = MESSAGE_ROUND3_MEMBERSHIP_RESPONSE;
+        pMembership->header.payloadLen = sizeof(MessageRound3FullMembership) - sizeof(MessageHeader) + membershipSize;
+
+        pMembership->sender_BGid = m_upConfig->BGid;
+        pMembership->sender_SLid = m_upConfig->SLid;
+        pMembership->cycle = cycleNumber;
+        pMembership->totalBGnum = m_upConfig->numBG();
+
+        memset(pMembership->combinedSignature, 0, SBFT_COMBINED_SIGNATURE_SIZE);
+        bool *pos = (bool *)pMembership->connectivity;
+        for(int i = 0; i < m_upConfig->numBG(); ++i){
+            for(int j = 0; j < m_upConfig->numBG(); ++j){
+                *pos = true;    // TODO: handle failures
+                pos++;
+            }
+        }
+
+        it->second->state = CycleState::ROUND3_WAITING_FOR_REPLICATED_MEMBERSHIP;
+        it->second->awaiting_message_type = MESSAGE_ROUND3_MEMBERSHIP_RESPONSE;
+        it->second->message_received_counter = 0;
+        it->second->message_required = m_upConfig->numBG() - 1;
+
+        // These are no longer needed
+        pTemporaryStorageOfPreprepare = nullptr;
+        pRound2_current_status = nullptr;
+
+        round3_respondToPendingFetchMembershipRequests(cycleNumber);
+        envoy_round3_sendFetchMembershipRequest(cycleNumber);
+    }
+    else if(pPreprepare->requestType == REQUEST_TYPE_FULL_MEMBERSHIP){
+        uint16_t cycleNumber = pPreprepare->cycle;
+        auto it = mapRound3Status.find(cycleNumber);
+        if(it == mapRound3Status.end()){
+            printf("Full membership full commit: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycleNumber);
+            throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
+        }
+
+        // Manage status
+        it->second->awaiting_message_type = MESSAGE_INVALID;
+        it->second->message_received_counter = 0;
+        it->second->message_required = 0;
+        it->second->state = CycleState::ROUND3_COMMITTED;
+
+        std::vector<int> votes((size_t)m_upConfig->numBG());
+        for(int i = 0; i < votes.size(); ++i){
+            votes[i] = 0;
+        }
+
+        char *pos = pPreprepare->participantsAndContent;
+        char *end = (char *)pPreprepare + sizeof(MessageHeader) + pPreprepare->header.payloadLen;
+        while(pos < end){
+            MessageRound3FullMembership *pMembership = (MessageRound3FullMembership *)pos;
+            DebugThrow(pMembership->totalBGnum == m_upConfig->numBG());
+            for(int i = 0; i < pMembership->totalBGnum; ++i){
+                #ifdef DEBUG_PRINT
+                printf("[");
+                #endif
+                for(int j = 0; j < pMembership->totalBGnum; ++j){
+                    if(*(bool *)(&(pMembership->connectivity[i * pMembership->totalBGnum + j]))){
+                        votes[j]++; // This is a vote from i to j
+                        #ifdef DEBUG_PRINT
+                        printf("T|");
+                        #endif
+                    }
+                    else{
+                        #ifdef DEBUG_PRINT
+                        printf("F|");
+                        #endif
+                        DebugThrow(false);  // We don't have failures yet
+                    }
+                }
+                #ifdef DEBUG_PRINT
+                printf("]\n");
+                #endif
+            }
+
+            pos += sizeof(MessageHeader);
+            pos += pMembership->header.payloadLen;
+        }
+
+        DebugThrow(pos == end); // The size calculation should be correct
+
+        #ifdef DEBUG_PRINT
+        printf("Tolerated failures: %d of %d\n", m_upConfig->globalFailures, m_upConfig->numBG());
+        printf("BG %d -- membership for cycle %hu:\n[", m_upConfig->BGid, cycleNumber);
+
+        std::set<int> finalMembership;
+        for(int i = 0; i < votes.size(); ++i){
+            if(votes[i] >= m_upConfig->numBG() - m_upConfig->globalFailures){
+                finalMembership.insert(i);
+                printf("%d ", i);
+            }
+            else{
+                printf("BG %d received %d votes, fewer than requirement %d votes! ", i, votes[i], m_upConfig->numBG() - m_upConfig->globalFailures);
+            }
+        }
+
+        printf("]\n");
+        #endif
+
+        pTemporaryStorageOfPreprepare = nullptr;
+        pRound2_current_status = nullptr;
+
+        round3_committed(cycleNumber);
     }
     else{
         throw Exception(Exception::EXCEPTION_MESSAGE_INVALID_REQUEST_TYPE);
@@ -1300,7 +1538,7 @@ void ConnManager::round3_committed(uint16_t cycle){
 
     struct timespec realtime;
     clock_gettime(CLOCK_REALTIME, &realtime);
-    
+
     printf("!%ld.%09ld | Cycle %hu committed on BG %d SL %d | %lu | %lf | ms\n", realtime.tv_sec, realtime.tv_nsec, cycle, m_upConfig->BGid, m_upConfig->SLid, REQUEST_BATCH_SIZE / REQUEST_SIZE, latency_ms.count());
     fflush(stdout); // ensure we get all logs for finished cycles
 
@@ -1317,17 +1555,7 @@ void ConnManager::dispatcher_round3_fetchRequest(std::unique_ptr<QueueElement> p
     if(it == mapRound3Status.end()){
         if(pStorage->exist(cycle)){
             // Stale request
-            MessageRound3FetchResponse *pFake = (MessageRound3FetchResponse *)fakeRound3ResponseForBaseline;
-            size_t fakeSize = getMessageSize((MessageHeader *)pFake);
-            char *buffer = new char[fakeSize];
-            memcpy(buffer, fakeRound3ResponseForBaseline, fakeSize);
-            MessageRound3FetchResponse *pCopy = (MessageRound3FetchResponse *)buffer;
-            pCopy->cycle = cycle;   // only thing that need to change
-
-            QueueElement response;
-            response.pMessage = (MessageHeader *)pCopy;
-            response.upPeers->push_front(&rgrgConnection[pFReq->sender_BGid][pFReq->sender_SLid]);
-            sendQueue.enqueue(std::move(response));
+            DebugThrowElseReturnVoid(false);
         }
         else{
             // Round 2 not finished yet
@@ -1865,14 +2093,12 @@ void ConnManager::dispatcher_round3_preprepare(std::unique_ptr<QueueElement> pEl
 }
 
 void ConnManager::dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> pElement){
-    MessageRound3PartialCommitBaseline *pPartialC3 = (MessageRound3PartialCommitBaseline *)pElement->pMessage;
-    uint16_t cycle = pPartialC3->cycle;
-
-    DebugThrowElseReturnVoid(isRound2Leader());
+    MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)pElement->pMessage;
+    uint16_t cycle = pPreprepare3->cycle;
 
     auto it = mapRound3Status.find(cycle);
     if(it == mapRound3Status.end()){
-        printf("dispatcher_round3_partialCommit: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycle);
+        printf("dispatcher_round3_preprepare: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycle);
         throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
     }
 
@@ -1896,7 +2122,6 @@ void ConnManager::dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> 
         MessageRound3FullCommitBaseline *pFullC = (MessageRound3FullCommitBaseline *)buffer;
         pFullC->header.version = VERSION_LATEST;
         pFullC->header.msgType = MESSAGE_ROUND3_FULL_COMMIT_BASELINE;
-        pFullC->header.payloadLen = sizeof(MessageRound3FullCommitBaseline) - sizeof(MessageHeader);
         
         pFullC->sender = m_upConfig->BGid;
         pFullC->cycle = cycle;
@@ -1911,18 +2136,16 @@ void ConnManager::dispatcher_round3_partialCommit(std::unique_ptr<QueueElement> 
             element.upPeers->push_front(&rgrgConnection[i][0]);
         }
         element.upPeers->push_front(nullptr);
-
-        sendQueue.enqueue(std::move(element));
     }
 }
 
 void ConnManager::dispatcher_round3_fullCommit(std::unique_ptr<QueueElement> pElement){
-    MessageRound3FullCommitBaseline *pFullC3 = (MessageRound3FullCommitBaseline *)pElement->pMessage;
-    uint16_t cycle = pFullC3->cycle;
+    MessageRound3PreprepareBaseline *pPreprepare3 = (MessageRound3PreprepareBaseline *)pElement->pMessage;
+    uint16_t cycle = pPreprepare3->cycle;
 
     auto it = mapRound3Status.find(cycle);
     if(it == mapRound3Status.end()){
-        printf("dispatcher_round3_fullCommit: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycle);
+        printf("dispatcher_round3_preprepare: BG %d SL %d cannot find cycle %hu in Round 3 logs!\n", m_upConfig->BGid, m_upConfig->SLid, cycle);
         throw Exception(Exception::EXCEPTION_CYCLE_NOT_IN_ROUND3);
     }
 

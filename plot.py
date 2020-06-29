@@ -1,7 +1,6 @@
 import os
 import argparse
 import matplotlib
-import openpyxl
 import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt

@@ -836,7 +836,7 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     if(pPreprepare->requestType == REQUEST_TYPE_LOCAL_CONNECTIVITY){
         auto it = mapRound3Status.find(pPreprepare->cycle);
         if(it == mapRound3Status.end()){
-            juggle(std::move(*pElement));
+            DebugThrowElseReturnVoid(false);
             return;
         }
 
@@ -912,6 +912,9 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     // Keep the Preprepare message in a temporary storage until it's committed
     DebugThrow(pTemporaryStorageOfPreprepare == nullptr);
     pTemporaryStorageOfPreprepare.swap(pElement);   // Keep the Preprepare message until it's committed
+    #ifdef DEBUG_PRINT
+    printf("BG %d SL %d accepted Preprepare for seq %hu cycle %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->seq, pPreprepare->cycle);
+    #endif
 }
 
 void ConnManager::dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> pElement){

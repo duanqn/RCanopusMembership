@@ -937,6 +937,7 @@ void ConnManager::dispatcher_round2_partialCommit(std::unique_ptr<QueueElement> 
 
     #ifdef DEBUG_PRINT
     printf("BG %d SL %d processing PartialC for seq %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPartialC->seq);
+    printf("Current Round 2 state: %d\n", int(pRound2_current_status->state));
     #endif
 
     DebugThrowElseReturnVoid(round2_isCollector);

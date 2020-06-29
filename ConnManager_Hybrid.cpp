@@ -811,6 +811,7 @@ void ConnManager::dispatcher_round2_request(std::unique_ptr<QueueElement> pEleme
 void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pElement){
     if(pRound2_current_status == nullptr){
         pRound2_current_status = std::make_unique<CycleStatus>(m_upConfig->numBG());
+        pRound2_current_status->state = CycleState::ROUND2_WAITING_FOR_PREPREPARE;
         pRound2_current_status->awaiting_message_type = MESSAGE_ROUND2_PREPREPARE;
         pRound2_current_status->message_received_counter = 0;
         pRound2_current_status->message_required = 1;

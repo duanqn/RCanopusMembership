@@ -827,6 +827,10 @@ void ConnManager::dispatcher_round2_preprepare(std::unique_ptr<QueueElement> pEl
     // Neglected: verify the validity of the PrePrepare message
 
     MessageRound2Preprepare* pPreprepare = (MessageRound2Preprepare *)pElement->pMessage;
+    #ifdef DEBUG_PRINT
+    printf("BG %d SL %d processing Preprepare for seq %hu cycle %hu\n", m_upConfig->BGid, m_upConfig->SLid, pPreprepare->seq, pPreprepare->cycle);
+    #endif
+
     if(pPreprepare->view > round2_next_view || (pPreprepare->view == round2_next_view && pPreprepare->seq > round2_next_seq)){
         juggle(std::move(*pElement));
         return;

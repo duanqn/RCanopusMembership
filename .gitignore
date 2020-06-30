@@ -8,3 +8,4 @@ membership_server
 testdir*
 *_deploy_*
 *.temp
+*.png

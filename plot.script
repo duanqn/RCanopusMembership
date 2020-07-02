@@ -1,5 +1,5 @@
 # num of graphs
-30
+33
 latency-throughput-bw1000.png
 caption: Throughput-latency graph (1000 Mbps)
 # x-axis
@@ -454,6 +454,52 @@ cond: intra-bg latency = 10
 cond: inter-bg latency = 80
 cond: note = baseline
 cond: inter-bg bandwidth = 500
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+###########################################
+latency-throughput-hybrid-2bg.png
+caption: Throughput-latency graph (2 BG, Hybrid)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 2
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = hybrid
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-hybrid-3bg.png
+caption: Throughput-latency graph (3 BG, Hybrid)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 3
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = hybrid
+cond: inter-bg bandwidth = 1000
+# num of y-axes
+2
+y: throughput = Throughput (tps)
+y: latency_avg = Latency (ms)
+
+latency-throughput-hybrid-4bg.png
+caption: Throughput-latency graph (4 BG, Hybrid)
+# x-axis
+x: aggregate sending rate = Aggregate sending rate (tps)
+5
+cond: bg = 4
+cond: intra-bg latency = 10
+cond: inter-bg latency = 100
+cond: note = hybrid
+cond: inter-bg bandwidth = 1000
 # num of y-axes
 2
 y: throughput = Throughput (tps)

@@ -127,10 +127,13 @@ def parseGraph(lines, pos):
     
     ax.set_title(caption)
     ax.set_ylim(bottom = 0, top=150000)
+    ax.set_xlim(left = 0)
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(start, end, 100000))
     ax.set_xlabel(xname)
 
     if hasAux:
-        ax_aux.set_ylim(bottom = 0, top=120000)
+        ax_aux.set_ylim(bottom = 0, top=400000)
         lines, labels = ax.get_legend_handles_labels()
         lines2, labels2 = ax_aux.get_legend_handles_labels()
         ax.legend(lines + lines2, labels + labels2, loc=2)
